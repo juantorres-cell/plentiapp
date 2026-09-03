@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -14,11 +16,22 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    // TODO (siguiente paso): conectar con Supabase Auth de verdad.
-    // const { error } = await supabase.auth.signInWithPassword({ email, password });
-    // if (error) setError(error.message);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    setLoading(false);
+    if (error) {
+      setLoading(false);
+      setError(
+        error.message === "Invalid login credentials"
+          ? "Correo o contraseña incorrectos."
+          : error.message
+      );
+      return;
+    }
+
+    router.push("/dashboard");
   }
 
   return (
@@ -74,7 +87,7 @@ export default function LoginPage() {
 
           <div className="mb-4">
             <label className="block text-[13px] font-medium text-[#223652] mb-1.5">
-              Correo
+              Correo institucional
             </label>
             <input
               type="email"
