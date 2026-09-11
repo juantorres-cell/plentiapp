@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getSemanaActual } from "@/lib/semana";
+import AppShell from "@/components/AppShell";
 
 type Estado = "bien" | "medio" | "mal";
 
@@ -140,8 +141,8 @@ export default function OperarPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F6F4EE] p-10">
-      <div className="max-w-[720px] mx-auto">
+    <AppShell>
+    <div className="max-w-[720px] mx-auto px-10 py-12">
         <p className="text-[12px] uppercase tracking-wider text-[#3F6E58] font-medium mb-1">
           Semana del {semana}
         </p>
@@ -246,8 +247,8 @@ export default function OperarPage() {
         >
           {guardando ? "Guardando..." : "Guardar operación"}
         </button>
-      </div>
     </div>
+    </AppShell>
   );
 }
 

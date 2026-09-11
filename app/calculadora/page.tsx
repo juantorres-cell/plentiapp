@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import AppShell from "@/components/AppShell";
 
 type Gasto = { id: string; categoria: string; monto: number };
 
@@ -110,8 +111,8 @@ export default function CalculadoraPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F6F4EE] p-10">
-      <div className="max-w-[900px] mx-auto">
+    <AppShell>
+    <div className="max-w-[900px] mx-auto px-10 py-12">
         <p className="text-[12px] uppercase tracking-wider text-[#3F6E58] font-medium mb-1">
           Salud financiera
         </p>
@@ -210,21 +211,37 @@ export default function CalculadoraPage() {
             </p>
 
             <div className="mt-6">
-              <div className="flex justify-between text-[13px] mb-2">
-                <span>Gasto libre</span>
-                <span className="font-medium">{porcentajeGasto}%</span>
+              <div className="h-2.5 rounded-full overflow-hidden flex mb-3">
+                <div className="bg-[#A85A34]" style={{ width: `${porcentajeGasto}%` }} />
+                <div className="bg-[#3F6E58]" style={{ width: `${100 - porcentajeGasto}%` }} />
               </div>
+
               <input
                 type="range"
                 min={0}
                 max={100}
                 value={porcentajeGasto}
                 onChange={(e) => setPorcentajeGasto(Number(e.target.value))}
-                className="w-full accent-[#3F6E58]"
+                className="w-full accent-[#3F6E58] -mt-1"
               />
-              <div className="flex justify-between text-[12px] text-[#8B93A3] mt-2">
-                <span>Gasto libre — $ {montoGastoLibre.toLocaleString("es-CO")}</span>
-                <span>Para invertir — $ {montoInversion.toLocaleString("es-CO")}</span>
+
+              <div className="flex justify-between mt-4">
+                <div>
+                  <p className="flex items-center gap-1.5 text-[12px] text-[#8B93A3] mb-0.5">
+                    <span className="w-2 h-2 rounded-full bg-[#A85A34]" /> Gasto libre ({porcentajeGasto}%)
+                  </p>
+                  <p className="text-sm font-medium text-[#16233B]">
+                    $ {montoGastoLibre.toLocaleString("es-CO")}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="flex items-center gap-1.5 justify-end text-[12px] text-[#8B93A3] mb-0.5">
+                    Para invertir ({100 - porcentajeGasto}%) <span className="w-2 h-2 rounded-full bg-[#3F6E58]" />
+                  </p>
+                  <p className="text-sm font-medium text-[#16233B]">
+                    $ {montoInversion.toLocaleString("es-CO")}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -245,7 +262,7 @@ export default function CalculadoraPage() {
             {mensaje && <p className="text-[12.5px] text-[#8B93A3] mt-3">{mensaje}</p>}
           </div>
         </div>
-      </div>
     </div>
+    </AppShell>
   );
 }

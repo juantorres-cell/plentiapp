@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getSemanaActual } from "@/lib/semana";
+import AppShell from "@/components/AppShell";
 import type { Session } from "@supabase/supabase-js";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
+  const [capitalDisponible, setCapitalDisponible] = useState<number | null>(null);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -18,7 +20,6 @@ export default function DashboardPage() {
         return;
       }
 
-      // ¿Ya hizo el check-in de esta semana? Si no, lo mandamos primero allá.
       const { data: checkIn } = await supabase
         .from("check_ins")
         .select("id")
@@ -32,22 +33,17 @@ export default function DashboardPage() {
         return;
       }
 
+      const { data: perfil } = await supabase
+        .from("profiles")
+        .select("capital_disponible")
+        .eq("id", data.session.user.id)
+        .single();
+
+      setCapitalDisponible(perfil?.capital_disponible ?? null);
       setSession(data.session);
       setChecking(false);
     });
-
-    // Si la sesión se cierra en otra pestaña, saca al usuario también aquí.
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, s) => {
-      if (!s) router.push("/login");
-    });
-
-    return () => listener.subscription.unsubscribe();
   }, [router]);
-
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push("/login");
-  }
 
   if (checking) {
     return (
@@ -57,48 +53,72 @@ export default function DashboardPage() {
     );
   }
 
+  const nombre = session?.user.email?.split("@")[0] ?? "";
+  const hora = new Date().getHours();
+  const saludo = hora < 12 ? "Buenos días" : hora < 19 ? "Buenas tardes" : "Buenas noches";
+
   return (
-    <div className="min-h-screen bg-[#F6F4EE] p-10">
-      <div className="flex justify-between items-center mb-10">
-        <div className="font-serif text-xl text-[#16233B]">
-          plenti<span className="text-[#3F6E58]">.trade</span>
+    <AppShell>
+      <div className="max-w-[880px] mx-auto px-10 py-12">
+        <p className="text-[12px] uppercase tracking-wider text-[#3F6E58] font-medium mb-1">
+          {saludo}
+        </p>
+        <h1 className="font-serif text-3xl text-[#16233B] mb-10">{nombre}</h1>
+
+        <div className="grid grid-cols-2 gap-5 mb-10">
+          <div className="bg-white border border-[#E4E0D4] rounded-lg p-6">
+            <p className="text-[12px] text-[#8B93A3] mb-2">Capital disponible para invertir</p>
+            <p className="font-serif text-[30px] text-[#3F6E58]">
+              {capitalDisponible != null
+                ? `$ ${capitalDisponible.toLocaleString("es-CO")}`
+                : "Sin calcular"}
+            </p>
+            {capitalDisponible == null && (
+              <a href="/calculadora" className="text-[12.5px] text-[#3F6E58] hover:underline">
+                Calcúlalo en tu capital libre →
+              </a>
+            )}
+          </div>
+          <div className="bg-[#16233B] rounded-lg p-6 text-[#C7D0DE]">
+            <p className="text-[12px] text-[#9AA5B8] mb-2">Check-in de esta semana</p>
+            <p className="font-serif text-lg text-white mb-1">Completado ✓</p>
+            <p className="text-[12.5px] text-[#9AA5B8]">Vuelve la próxima semana para el siguiente.</p>
+          </div>
         </div>
-        <button
-          onClick={handleLogout}
-          className="text-[13px] text-[#8B93A3] hover:text-[#16233B]"
-        >
-          Cerrar sesión
-        </button>
-      </div>
 
-      <h1 className="font-serif text-2xl text-[#16233B] mb-2">
-        Bienvenido, {session?.user.email}
-      </h1>
-      <p className="text-sm text-[#8B93A3] mb-6">
-        Esta ruta ya está protegida — si borras tu sesión o abres esta URL
-        sin haber iniciado sesión, te devuelve automáticamente al login.
-      </p>
-
-      <div className="flex gap-3">
-        <a
-          href="/operar"
-          className="inline-block py-2.5 px-5 bg-[#16233B] text-white rounded text-sm"
-        >
-          Registrar operación de esta semana
-        </a>
-        <a
-          href="/calculadora"
-          className="inline-block py-2.5 px-5 border border-[#E4E0D4] rounded text-sm text-[#16233B]"
-        >
-          Mi capital libre
-        </a>
-        <a
-          href="/diario"
-          className="inline-block py-2.5 px-5 border border-[#E4E0D4] rounded text-sm text-[#16233B]"
-        >
-          Diario de trading
-        </a>
+        <p className="text-[12px] uppercase tracking-wider text-[#8B93A3] font-medium mb-3">
+          Accesos rápidos
+        </p>
+        <div className="grid grid-cols-3 gap-4">
+          <TarjetaAcceso
+            href="/operar"
+            titulo="Registrar operación"
+            descripcion="Genera tu bloque JSON y registra el resultado de la semana."
+          />
+          <TarjetaAcceso
+            href="/calculadora"
+            titulo="Mi capital libre"
+            descripcion="Ajusta tus ingresos, gastos y cuánto destinar a inversión."
+          />
+          <TarjetaAcceso
+            href="/diario"
+            titulo="Diario de trading"
+            descripcion="Revisa tu historial de operaciones y estados emocionales."
+          />
+        </div>
       </div>
-    </div>
+    </AppShell>
+  );
+}
+
+function TarjetaAcceso({ href, titulo, descripcion }: { href: string; titulo: string; descripcion: string }) {
+  return (
+    <a
+      href={href}
+      className="block bg-white border border-[#E4E0D4] rounded-lg p-5 hover:border-[#3F6E58] transition-colors"
+    >
+      <p className="text-sm font-medium text-[#16233B] mb-1.5">{titulo}</p>
+      <p className="text-[12.5px] text-[#8B93A3] leading-relaxed">{descripcion}</p>
+    </a>
   );
 }
