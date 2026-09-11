@@ -35,11 +35,22 @@ export default function OperarPage() {
   const semana = getSemanaActual();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) {
         router.push("/login");
-      } else {
-        setUserId(data.session.user.id);
+        return;
+      }
+      setUserId(data.session.user.id);
+
+      // Precargamos el capital que ya calculaste en /calculadora, para no repetirlo a mano.
+      const { data: perfil } = await supabase
+        .from("profiles")
+        .select("capital_disponible")
+        .eq("id", data.session.user.id)
+        .single();
+
+      if (perfil?.capital_disponible != null) {
+        setCapitalDisponible(String(perfil.capital_disponible));
       }
     });
   }, [router]);

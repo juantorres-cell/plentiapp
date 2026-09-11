@@ -79,12 +79,26 @@ export default function DashboardPage() {
         sin haber iniciado sesión, te devuelve automáticamente al login.
       </p>
 
-      <a
-        href="/operar"
-        className="inline-block py-2.5 px-5 bg-[#16233B] text-white rounded text-sm"
-      >
-        Registrar operación de esta semana
-      </a>
+      <div className="flex gap-3">
+        <a
+          href="/operar"
+          className="inline-block py-2.5 px-5 bg-[#16233B] text-white rounded text-sm"
+        >
+          Registrar operación de esta semana
+        </a>
+        <a
+          href="/calculadora"
+          className="inline-block py-2.5 px-5 border border-[#E4E0D4] rounded text-sm text-[#16233B]"
+        >
+          Mi capital libre
+        </a>
+        <a
+          href="/diario"
+          className="inline-block py-2.5 px-5 border border-[#E4E0D4] rounded text-sm text-[#16233B]"
+        >
+          Diario de trading
+        </a>
+      </div>
     </div>
   );
 }
