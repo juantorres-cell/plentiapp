@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getSemanaActual } from "@/lib/semana";
 import type { Session } from "@supabase/supabase-js";
 
 export default function DashboardPage() {
@@ -11,13 +12,28 @@ export default function DashboardPage() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) {
         router.push("/login");
-      } else {
-        setSession(data.session);
-        setChecking(false);
+        return;
       }
+
+      // ¿Ya hizo el check-in de esta semana? Si no, lo mandamos primero allá.
+      const { data: checkIn } = await supabase
+        .from("check_ins")
+        .select("id")
+        .eq("user_id", data.session.user.id)
+        .eq("semana", getSemanaActual())
+        .eq("tipo", "entrada")
+        .maybeSingle();
+
+      if (!checkIn) {
+        router.replace("/check-in");
+        return;
+      }
+
+      setSession(data.session);
+      setChecking(false);
     });
 
     // Si la sesión se cierra en otra pestaña, saca al usuario también aquí.
@@ -58,10 +74,17 @@ export default function DashboardPage() {
       <h1 className="font-serif text-2xl text-[#16233B] mb-2">
         Bienvenido, {session?.user.email}
       </h1>
-      <p className="text-sm text-[#8B93A3]">
+      <p className="text-sm text-[#8B93A3] mb-6">
         Esta ruta ya está protegida — si borras tu sesión o abres esta URL
         sin haber iniciado sesión, te devuelve automáticamente al login.
       </p>
+
+      <a
+        href="/operar"
+        className="inline-block py-2.5 px-5 bg-[#16233B] text-white rounded text-sm"
+      >
+        Registrar operación de esta semana
+      </a>
     </div>
   );
 }
