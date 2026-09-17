@@ -88,7 +88,7 @@ export default function CalculadoraPage() {
       .update({
         ingresos_mensuales: Number(ingresos) || 0,
         porcentaje_gasto: porcentajeGasto,
-        capital_disponible: montoInversion, // esto es lo que se precarga al registrar una operación
+        capital_disponible: montoInversion,
       })
       .eq("id", userId);
 
@@ -104,38 +104,28 @@ export default function CalculadoraPage() {
 
   if (cargando) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F6F4EE]">
-        <p className="text-sm text-[#8B93A3]">Cargando...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#0B0F0E]">
+        <p className="text-sm text-[#7C8A82]">Cargando...</p>
       </div>
     );
   }
 
   return (
     <AppShell>
-    <div className="max-w-[900px] mx-auto px-10 py-12">
-        <p className="text-[12px] uppercase tracking-wider text-[#3F6E58] font-medium mb-1">
-          Salud financiera
-        </p>
-        <h1 className="font-serif text-2xl text-[#16233B] mb-8">Tu capital libre</h1>
+      <div className="max-w-[900px] mx-auto px-10 py-12">
+        <p className="text-[12px] uppercase tracking-wider text-[#34D399] font-medium mb-1">Salud financiera</p>
+        <h1 className="font-serif text-2xl text-[#E7ECE8] mb-8">Tu capital libre</h1>
 
         <div className="grid md:grid-cols-[1.3fr_1fr] gap-7">
-          {/* Gastos fijos */}
-          <div className="bg-white border border-[#E4E0D4] rounded-md p-6">
-            <h2 className="font-serif text-lg text-[#16233B] mb-5">Ingresos y gastos fijos</h2>
+          <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6">
+            <h2 className="font-serif text-lg text-[#E7ECE8] mb-5">Ingresos y gastos fijos</h2>
 
-            <label className="block text-[13px] font-medium text-[#223652] mb-1.5">
-              Ingresos mensuales ($)
-            </label>
-            <input
-              value={ingresos}
-              onChange={(e) => setIngresos(e.target.value)}
-              type="number"
-              className="input mb-5"
-            />
+            <label className="block text-[13px] font-medium text-[#B7C0BA] mb-1.5">Ingresos mensuales ($)</label>
+            <input value={ingresos} onChange={(e) => setIngresos(e.target.value)} type="number" className="input mb-5" />
 
             <table className="w-full text-sm mb-3">
               <thead>
-                <tr className="text-[11px] uppercase text-[#8B93A3] border-b border-[#E4E0D4]">
+                <tr className="text-[11px] uppercase text-[#7C8A82] border-b border-[#24302A]">
                   <th className="text-left pb-2 font-medium">Categoría</th>
                   <th className="text-right pb-2 font-medium">Monto</th>
                   <th></th>
@@ -143,16 +133,11 @@ export default function CalculadoraPage() {
               </thead>
               <tbody>
                 {gastos.map((g) => (
-                  <tr key={g.id} className="border-b border-[#F0EEE6]">
-                    <td className="py-2.5">{g.categoria}</td>
-                    <td className="py-2.5 text-right tabular-nums">
-                      $ {Number(g.monto).toLocaleString("es-CO")}
-                    </td>
+                  <tr key={g.id} className="border-b border-[#1B2420]">
+                    <td className="py-2.5 text-[#E7ECE8]">{g.categoria}</td>
+                    <td className="py-2.5 text-right tabular-nums text-[#E7ECE8]">$ {Number(g.monto).toLocaleString("es-CO")}</td>
                     <td className="py-2.5 text-right">
-                      <button
-                        onClick={() => borrarGasto(g.id)}
-                        className="text-[#A85A34] text-xs hover:underline"
-                      >
+                      <button onClick={() => borrarGasto(g.id)} className="text-[#E0605A] text-xs hover:underline">
                         Quitar
                       </button>
                     </td>
@@ -160,109 +145,72 @@ export default function CalculadoraPage() {
                 ))}
                 {gastos.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="py-3 text-[#8B93A3] text-sm">
-                      Aún no has agregado gastos fijos.
-                    </td>
+                    <td colSpan={3} className="py-3 text-[#7C8A82] text-sm">Aún no has agregado gastos fijos.</td>
                   </tr>
                 )}
               </tbody>
             </table>
 
             <div className="flex gap-2 mt-3">
-              <input
-                value={nuevaCategoria}
-                onChange={(e) => setNuevaCategoria(e.target.value)}
-                placeholder="Nueva categoría, ej: Arriendo"
-                className="input flex-1"
-              />
-              <input
-                value={nuevoMonto}
-                onChange={(e) => setNuevoMonto(e.target.value)}
-                type="number"
-                placeholder="Monto"
-                className="input"
-                style={{ maxWidth: 120 }}
-              />
-              <button
-                onClick={agregarGasto}
-                className="px-4 border border-[#E4E0D4] rounded text-sm text-[#16233B] bg-[#F6F4EE]"
-              >
+              <input value={nuevaCategoria} onChange={(e) => setNuevaCategoria(e.target.value)} placeholder="Nueva categoría, ej: Arriendo" className="input flex-1" />
+              <input value={nuevoMonto} onChange={(e) => setNuevoMonto(e.target.value)} type="number" placeholder="Monto" className="input" style={{ maxWidth: 120 }} />
+              <button onClick={agregarGasto} className="px-4 border border-[#24302A] rounded text-sm text-[#E7ECE8] bg-[#0E1412]">
                 Agregar
               </button>
             </div>
           </div>
 
-          {/* Resumen */}
-          <div className="bg-white border border-[#E4E0D4] rounded-md p-6">
-            <h2 className="font-serif text-lg text-[#16233B] mb-5">Resumen</h2>
+          <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6">
+            <h2 className="font-serif text-lg text-[#E7ECE8] mb-5">Resumen</h2>
 
-            <div className="flex justify-between text-sm py-2">
-              <span className="text-[#8B93A3]">Ingresos mensuales</span>
+            <div className="flex justify-between text-sm py-2 text-[#B7C0BA]">
+              <span className="text-[#7C8A82]">Ingresos mensuales</span>
               <span>$ {(Number(ingresos) || 0).toLocaleString("es-CO")}</span>
             </div>
-            <div className="flex justify-between text-sm py-2 border-t border-[#E4E0D4] font-medium">
+            <div className="flex justify-between text-sm py-2 border-t border-[#24302A] font-medium text-[#E7ECE8]">
               <span>Total gastos fijos</span>
               <span>$ {totalGastos.toLocaleString("es-CO")}</span>
             </div>
 
-            <p className="text-[12px] text-[#8B93A3] mt-5 mb-1">Capital libre</p>
-            <p className="font-serif text-[32px] text-[#3F6E58] mb-1">
-              $ {capitalLibre.toLocaleString("es-CO")}
-            </p>
+            <p className="text-[12px] text-[#7C8A82] mt-5 mb-1">Capital libre</p>
+            <p className="font-serif text-[32px] text-[#34D399] mb-1">$ {capitalLibre.toLocaleString("es-CO")}</p>
 
             <div className="mt-6">
-              <div className="h-2.5 rounded-full overflow-hidden flex mb-3">
-                <div className="bg-[#A85A34]" style={{ width: `${porcentajeGasto}%` }} />
-                <div className="bg-[#3F6E58]" style={{ width: `${100 - porcentajeGasto}%` }} />
+              <div className="h-2.5 rounded-full overflow-hidden flex mb-3 bg-[#1B2420]">
+                <div className="bg-[#E0605A]" style={{ width: `${porcentajeGasto}%` }} />
+                <div className="bg-[#34D399]" style={{ width: `${100 - porcentajeGasto}%` }} />
               </div>
 
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={porcentajeGasto}
-                onChange={(e) => setPorcentajeGasto(Number(e.target.value))}
-                className="w-full accent-[#3F6E58] -mt-1"
-              />
+              <input type="range" min={0} max={100} value={porcentajeGasto} onChange={(e) => setPorcentajeGasto(Number(e.target.value))} className="w-full accent-[#34D399] -mt-1" />
 
               <div className="flex justify-between mt-4">
                 <div>
-                  <p className="flex items-center gap-1.5 text-[12px] text-[#8B93A3] mb-0.5">
-                    <span className="w-2 h-2 rounded-full bg-[#A85A34]" /> Gasto libre ({porcentajeGasto}%)
+                  <p className="flex items-center gap-1.5 text-[12px] text-[#7C8A82] mb-0.5">
+                    <span className="w-2 h-2 rounded-full bg-[#E0605A]" /> Gasto libre ({porcentajeGasto}%)
                   </p>
-                  <p className="text-sm font-medium text-[#16233B]">
-                    $ {montoGastoLibre.toLocaleString("es-CO")}
-                  </p>
+                  <p className="text-sm font-medium text-[#E7ECE8]">$ {montoGastoLibre.toLocaleString("es-CO")}</p>
                 </div>
                 <div className="text-right">
-                  <p className="flex items-center gap-1.5 justify-end text-[12px] text-[#8B93A3] mb-0.5">
-                    Para invertir ({100 - porcentajeGasto}%) <span className="w-2 h-2 rounded-full bg-[#3F6E58]" />
+                  <p className="flex items-center gap-1.5 justify-end text-[12px] text-[#7C8A82] mb-0.5">
+                    Para invertir ({100 - porcentajeGasto}%) <span className="w-2 h-2 rounded-full bg-[#34D399]" />
                   </p>
-                  <p className="text-sm font-medium text-[#16233B]">
-                    $ {montoInversion.toLocaleString("es-CO")}
-                  </p>
+                  <p className="text-sm font-medium text-[#E7ECE8]">$ {montoInversion.toLocaleString("es-CO")}</p>
                 </div>
               </div>
             </div>
 
-            <div className="mt-5 p-3.5 bg-[#E7EFE9] rounded flex gap-2.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#3F6E58] mt-1.5 flex-shrink-0" />
-              <p className="text-[12.5px] leading-relaxed text-[#2E4A3C] m-0">
-                {textoSugerencia(porcentajeGasto)}
-              </p>
+            <div className="mt-5 p-3.5 bg-[#12261B] rounded flex gap-2.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#34D399] mt-1.5 flex-shrink-0" />
+              <p className="text-[12.5px] leading-relaxed text-[#8FCBAA] m-0">{textoSugerencia(porcentajeGasto)}</p>
             </div>
 
-            <button
-              onClick={guardar}
-              disabled={guardando}
-              className="w-full mt-6 py-3 bg-[#16233B] text-white rounded text-sm font-medium disabled:opacity-50"
-            >
+            <button onClick={guardar} disabled={guardando} className="w-full mt-6 py-3 bg-[#34D399] text-[#0B0F0E] rounded text-sm font-medium disabled:opacity-50">
               {guardando ? "Guardando..." : "Guardar y actualizar mi capital"}
             </button>
-            {mensaje && <p className="text-[12.5px] text-[#8B93A3] mt-3">{mensaje}</p>}
+            {mensaje && <p className="text-[12.5px] text-[#7C8A82] mt-3">{mensaje}</p>}
           </div>
         </div>
-    </div>
+      </div>
     </AppShell>
   );
 }

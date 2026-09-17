@@ -8,6 +8,7 @@ const NAV = [
   { href: "/operar", label: "Operar", icon: IconChart },
   { href: "/calculadora", label: "Capital libre", icon: IconCalc },
   { href: "/diario", label: "Diario", icon: IconBook },
+  { href: "/reglas", label: "Reglas", icon: IconShield },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -20,11 +21,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#F6F4EE]">
-      <aside className="w-60 bg-[#16233B] text-[#C7D0DE] flex flex-col justify-between py-8 px-5 flex-shrink-0">
+    <div className="min-h-screen flex bg-[#0B0F0E]">
+      <aside className="w-60 bg-[#070A09] border-r border-[#1B2420] text-[#7C8A82] flex flex-col justify-between py-8 px-5 flex-shrink-0">
         <div>
-          <div className="font-serif text-lg text-white mb-10 px-2">
-            plenti<span className="text-[#3F6E58]">.trade</span>
+          <div className="font-serif text-lg text-[#E7ECE8] mb-10 px-2">
+            plenti<span className="text-[#34D399]">.trade</span>
           </div>
           <nav className="flex flex-col gap-1">
             {NAV.map((item) => {
@@ -35,8 +36,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
                     activo
-                      ? "bg-white/10 text-white"
-                      : "text-[#9AA5B8] hover:text-white hover:bg-white/5"
+                      ? "bg-[#12261B] text-[#34D399]"
+                      : "text-[#7C8A82] hover:text-[#E7ECE8] hover:bg-[#12261B]/40"
                   }`}
                 >
                   <item.icon activo={activo} />
@@ -49,7 +50,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2.5 text-sm text-[#9AA5B8] hover:text-white transition-colors"
+          className="flex items-center gap-3 px-3 py-2.5 text-sm text-[#7C8A82] hover:text-[#E7ECE8] transition-colors"
         >
           <IconLogout />
           Cerrar sesión
@@ -61,8 +62,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* ---------- Iconos (SVG simples, sin dependencias) ---------- */
-
 function IconHome({ activo }: { activo?: boolean }) {
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={activo ? 2 : 1.6} strokeLinecap="round" strokeLinejoin="round">
@@ -71,7 +70,6 @@ function IconHome({ activo }: { activo?: boolean }) {
     </svg>
   );
 }
-
 function IconChart({ activo }: { activo?: boolean }) {
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={activo ? 2 : 1.6} strokeLinecap="round" strokeLinejoin="round">
@@ -81,7 +79,6 @@ function IconChart({ activo }: { activo?: boolean }) {
     </svg>
   );
 }
-
 function IconCalc({ activo }: { activo?: boolean }) {
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={activo ? 2 : 1.6} strokeLinecap="round" strokeLinejoin="round">
@@ -90,7 +87,6 @@ function IconCalc({ activo }: { activo?: boolean }) {
     </svg>
   );
 }
-
 function IconBook({ activo }: { activo?: boolean }) {
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={activo ? 2 : 1.6} strokeLinecap="round" strokeLinejoin="round">
@@ -99,7 +95,13 @@ function IconBook({ activo }: { activo?: boolean }) {
     </svg>
   );
 }
-
+function IconShield({ activo }: { activo?: boolean }) {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={activo ? 2 : 1.6} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" />
+    </svg>
+  );
+}
 function IconLogout() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">

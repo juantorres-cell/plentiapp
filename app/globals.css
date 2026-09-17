@@ -32,13 +32,16 @@ body {
   padding: 10px 12px;
   font-size: 14px;
   font-family: inherit;
-  border: 1px solid #E4E0D4;
+  border: 1px solid #24302A;
   border-radius: 3px;
-  background: #fff;
-  color: #16233B;
+  background: #0E1412;
+  color: #E7ECE8;
   outline: none;
 }
+.input::placeholder {
+  color: #4A564F;
+}
 .input:focus {
-  border-color: #3F6E58;
+  border-color: #34D399;
 }
  
