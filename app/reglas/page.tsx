@@ -14,6 +14,7 @@ export default function ReglasPage() {
 
   const [regla1Activa, setRegla1Activa] = useState(true);
   const [riesgoMaximoPct, setRiesgoMaximoPct] = useState(1);
+  const [baseCalculoRiesgo, setBaseCalculoRiesgo] = useState<"capital_total" | "capital_invertido">("capital_total");
 
   const [limitePortafolioActiva, setLimitePortafolioActiva] = useState(false);
   const [limitePortafolioPct, setLimitePortafolioPct] = useState(5);
@@ -31,7 +32,7 @@ export default function ReglasPage() {
       const { data: perfil } = await supabase
         .from("profiles")
         .select(
-          "regla_1_activa, riesgo_maximo_pct, limite_portafolio_activa, limite_portafolio_pct, una_operacion_semana_activa"
+          "regla_1_activa, riesgo_maximo_pct, base_calculo_riesgo, limite_portafolio_activa, limite_portafolio_pct, una_operacion_semana_activa"
         )
         .eq("id", data.session.user.id)
         .single();
@@ -39,6 +40,7 @@ export default function ReglasPage() {
       if (perfil) {
         setRegla1Activa(perfil.regla_1_activa ?? true);
         setRiesgoMaximoPct(perfil.riesgo_maximo_pct ?? 1);
+        setBaseCalculoRiesgo(perfil.base_calculo_riesgo ?? "capital_total");
         setLimitePortafolioActiva(perfil.limite_portafolio_activa ?? false);
         setLimitePortafolioPct(perfil.limite_portafolio_pct ?? 5);
         setUnaOperacionActiva(perfil.una_operacion_semana_activa ?? false);
@@ -57,6 +59,7 @@ export default function ReglasPage() {
       .update({
         regla_1_activa: regla1Activa,
         riesgo_maximo_pct: riesgoMaximoPct,
+        base_calculo_riesgo: baseCalculoRiesgo,
         limite_portafolio_activa: limitePortafolioActiva,
         limite_portafolio_pct: limitePortafolioPct,
         una_operacion_semana_activa: unaOperacionActiva,
@@ -96,7 +99,39 @@ export default function ReglasPage() {
             onToggle={() => setRegla1Activa(!regla1Activa)}
           >
             {regla1Activa && (
-              <CampoPorcentaje label="Riesgo máximo por operación" valor={riesgoMaximoPct} onChange={setRiesgoMaximoPct} />
+              <div className="flex flex-col gap-4">
+                <CampoPorcentaje label="Riesgo máximo por operación" valor={riesgoMaximoPct} onChange={setRiesgoMaximoPct} />
+
+                <div>
+                  <p className="text-[13px] text-[#B7C0BA] mb-2">¿Sobre qué se calcula el riesgo?</p>
+                  <div className="flex flex-col gap-2">
+                    <label className="flex items-start gap-2.5 text-[12.5px] text-[#7C8A82] cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={baseCalculoRiesgo === "capital_total"}
+                        onChange={() => setBaseCalculoRiesgo("capital_total")}
+                        className="mt-0.5 accent-[#34D399]"
+                      />
+                      <span>
+                        <span className="text-[#E7ECE8] font-medium">Capital total disponible</span> — recomendado. Protege
+                        tu cuenta completa, sin importar el tamaño de la posición.
+                      </span>
+                    </label>
+                    <label className="flex items-start gap-2.5 text-[12.5px] text-[#7C8A82] cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={baseCalculoRiesgo === "capital_invertido"}
+                        onChange={() => setBaseCalculoRiesgo("capital_invertido")}
+                        className="mt-0.5 accent-[#34D399]"
+                      />
+                      <span>
+                        <span className="text-[#E7ECE8] font-medium">Monto invertido en esta operación</span> — más
+                        permisivo con posiciones grandes.
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
             )}
           </ReglaCard>
 

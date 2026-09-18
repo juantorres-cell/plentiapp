@@ -11,6 +11,7 @@ type Estado = "bien" | "medio" | "mal";
 type Reglas = {
   regla_1_activa: boolean;
   riesgo_maximo_pct: number;
+  base_calculo_riesgo: "capital_total" | "capital_invertido";
   limite_portafolio_activa: boolean;
   limite_portafolio_pct: number;
   una_operacion_semana_activa: boolean;
@@ -22,6 +23,7 @@ export default function OperarPage() {
   const [reglas, setReglas] = useState<Reglas | null>(null);
   const [yaOperoEstaSemana, setYaOperoEstaSemana] = useState(false);
   const [precioReferencia, setPrecioReferencia] = useState("");
+  const [confirmacionRiesgo, setConfirmacionRiesgo] = useState(false);
 
   const [capitalDisponible, setCapitalDisponible] = useState("");
   const [justificacion, setJustificacion] = useState("");
@@ -55,7 +57,7 @@ export default function OperarPage() {
       const { data: perfil } = await supabase
         .from("profiles")
         .select(
-          "capital_disponible, regla_1_activa, riesgo_maximo_pct, limite_portafolio_activa, limite_portafolio_pct, una_operacion_semana_activa"
+          "capital_disponible, regla_1_activa, riesgo_maximo_pct, base_calculo_riesgo, limite_portafolio_activa, limite_portafolio_pct, una_operacion_semana_activa"
         )
         .eq("id", data.session.user.id)
         .single();
@@ -67,6 +69,7 @@ export default function OperarPage() {
         setReglas({
           regla_1_activa: perfil.regla_1_activa,
           riesgo_maximo_pct: perfil.riesgo_maximo_pct,
+          base_calculo_riesgo: perfil.base_calculo_riesgo ?? "capital_total",
           limite_portafolio_activa: perfil.limite_portafolio_activa,
           limite_portafolio_pct: perfil.limite_portafolio_pct,
           una_operacion_semana_activa: perfil.una_operacion_semana_activa,
@@ -98,14 +101,33 @@ export default function OperarPage() {
 
   // --- Cálculo del riesgo en vivo, según las reglas que el usuario tenga activas ---
   const precioRef = Number(precioReferencia) || (tipoOrden === "LIMIT" ? Number(precioLimite) : 0);
+  const montoPosicion = precioRef ? precioRef * (Number(cantidad) || 0) : null;
+
+  // La base sobre la que se calcula el % de riesgo depende de lo elegido en /reglas:
+  // capital total de la cuenta, o solo el monto invertido en esta operación puntual.
+  const capitalBase =
+    reglas?.base_calculo_riesgo === "capital_invertido"
+      ? montoPosicion
+      : Number(capitalDisponible) || null;
+
   const montoRiesgo =
     precioRef && stopLoss ? Math.abs(precioRef - Number(stopLoss)) * (Number(cantidad) || 0) : null;
-  const pctRiesgo =
-    montoRiesgo != null && Number(capitalDisponible) > 0 ? (montoRiesgo / Number(capitalDisponible)) * 100 : null;
+  const pctRiesgo = montoRiesgo != null && capitalBase ? (montoRiesgo / capitalBase) * 100 : null;
 
-  const montoPosicion = precioRef ? precioRef * (Number(cantidad) || 0) : null;
   const pctPortafolio =
-    montoPosicion != null && Number(capitalDisponible) > 0 ? (montoPosicion / Number(capitalDisponible)) * 100 : null;
+    montoPosicion != null && Number(capitalDisponible) > 0
+      ? (montoPosicion / Number(capitalDisponible)) * 100
+      : null;
+
+  // Stop loss sugerido: despeja la distancia máxima permitida a partir del riesgo máximo,
+  // y la resta del precio de referencia (asumiendo una posición larga / compra).
+  const stopLossSugerido =
+    reglas?.regla_1_activa && precioRef && Number(cantidad) > 0 && capitalBase
+      ? Math.max(0, precioRef - (capitalBase * (reglas.riesgo_maximo_pct / 100)) / Number(cantidad))
+      : null;
+
+  const superaRegla1 = reglas?.regla_1_activa && pctRiesgo != null && pctRiesgo > reglas.riesgo_maximo_pct;
+  const puedeGuardar = !superaRegla1 || confirmacionRiesgo;
 
   async function handleSubmit() {
     if (!userId) return;
@@ -196,6 +218,15 @@ export default function OperarPage() {
             </Campo>
             <Campo label="Stop loss ($)">
               <input type="number" value={stopLoss} onChange={(e) => setStopLoss(e.target.value)} className="input" />
+              {stopLossSugerido != null && Number(stopLoss) !== Number(stopLossSugerido.toFixed(2)) && (
+                <button
+                  type="button"
+                  onClick={() => setStopLoss(stopLossSugerido.toFixed(2))}
+                  className="text-[11.5px] text-[#34D399] hover:underline mt-1"
+                >
+                  Sugerido según tu regla: ${stopLossSugerido.toFixed(2)} — usar este valor
+                </button>
+              )}
             </Campo>
           </div>
 
@@ -283,7 +314,18 @@ export default function OperarPage() {
                 ) : pctRiesgo <= reglas.riesgo_maximo_pct ? (
                   <AvisoRegla tipo="ok" texto={`Dentro de tu regla del ${reglas.riesgo_maximo_pct}%: estás arriesgando ${pctRiesgo.toFixed(2)}% de tu capital.`} />
                 ) : (
-                  <AvisoRegla tipo="alerta" texto={`Esto supera tu regla del ${reglas.riesgo_maximo_pct}%: estás arriesgando ${pctRiesgo.toFixed(2)}%. Considera reducir la cantidad o acercar el stop loss.`} />
+                  <>
+                    <AvisoRegla tipo="alerta" texto={`Esto supera tu regla del ${reglas.riesgo_maximo_pct}%: estás arriesgando ${pctRiesgo.toFixed(2)}%. Considera reducir la cantidad o usar el stop loss sugerido.`} />
+                    <label className="flex items-start gap-2.5 text-[12.5px] text-[#F0A099] cursor-pointer px-0.5">
+                      <input
+                        type="checkbox"
+                        checked={confirmacionRiesgo}
+                        onChange={(e) => setConfirmacionRiesgo(e.target.checked)}
+                        className="mt-0.5 accent-[#E0605A]"
+                      />
+                      <span>Entiendo que esto supera mi regla del 1% y quiero continuar de todas formas.</span>
+                    </label>
+                  </>
                 )
               )}
 
@@ -300,8 +342,8 @@ export default function OperarPage() {
 
         {error && <p className="text-[13px] text-[#E0605A] mb-4">{error}</p>}
 
-        <button onClick={handleSubmit} disabled={guardando} className="w-full py-3.5 bg-[#34D399] text-[#0B0F0E] rounded text-sm font-medium disabled:opacity-50">
-          {guardando ? "Guardando..." : "Guardar operación"}
+        <button onClick={handleSubmit} disabled={guardando || !puedeGuardar} className="w-full py-3.5 bg-[#34D399] text-[#0B0F0E] rounded text-sm font-medium disabled:opacity-50">
+          {guardando ? "Guardando..." : !puedeGuardar ? "Confirma el riesgo para guardar" : "Guardar operación"}
         </button>
       </div>
     </AppShell>
