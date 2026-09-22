@@ -1,42 +1,49 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { createChart, CandlestickSeries } from "lightweight-charts";
+import { createChart, CandlestickSeries, IChartApi, ISeriesApi, CandlestickData } from "lightweight-charts";
 
-export default function SimuladorChart({ data }: { data: any }) {
-  const chartContainerRef = useRef<HTMLDivElement>(null);
+export default function SimuladorChart({ data }: { data: CandlestickData[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 
+  // Crea el gráfico UNA sola vez, no en cada cambio de datos.
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    if (!containerRef.current) return;
 
-    // 1. Inicializar el gráfico delegando el tamaño a la librería (autoSize)
-    const chart = createChart(chartContainerRef.current, {
-      autoSize: true, 
-      layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#D9D9D9' },
-      grid: { vertLines: { color: '#2B2B2B' }, horzLines: { color: '#2B2B2B' } },
+    const chart = createChart(containerRef.current, {
+      autoSize: true,
+      layout: { background: { type: "solid" as const, color: "#0E1412" }, textColor: "#B7C0BA" },
+      grid: { vertLines: { color: "#1B2420" }, horzLines: { color: "#1B2420" } },
+      timeScale: { borderColor: "#24302A" },
+      rightPriceScale: { borderColor: "#24302A" },
     });
 
-    // 2. Agregar la serie de Velas Japonesas
-    const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#22c55e', 
-      downColor: '#ef4444', 
+    const series = chart.addSeries(CandlestickSeries, {
+      upColor: "#34D399",
+      downColor: "#E0605A",
       borderVisible: false,
-      wickUpColor: '#22c55e',
-      wickDownColor: '#ef4444',
+      wickUpColor: "#34D399",
+      wickDownColor: "#E0605A",
     });
 
-    // 3. Cargar los datos ficticios
-    candlestickSeries.setData(data);
-    
-    // 4. Hacer zoom automático para que las 4 velas ocupen el centro de la pantalla
-    chart.timeScale().fitContent();
+    chartRef.current = chart;
+    seriesRef.current = series;
 
-    // Limpiar el gráfico al desmontar
     return () => {
       chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
     };
+  }, []); // <- solo al montar, no en cada cambio de "data"
+
+  // Cuando cambian los datos, solo actualiza la serie — no recrea el gráfico ni pierde el zoom.
+  useEffect(() => {
+    if (!seriesRef.current) return;
+    seriesRef.current.setData(data);
+    chartRef.current?.timeScale().fitContent();
   }, [data]);
 
-  // El contenedor mantiene sus clases de Tailwind para definir el espacio
-  return <div ref={chartContainerRef} className="w-full h-[400px]" />;
+  return <div ref={containerRef} className="w-full h-[400px]" />;
 }

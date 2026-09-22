@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 const NAV = [
   { href: "/dashboard", label: "Resumen", icon: IconHome },
   { href: "/operar", label: "Operar", icon: IconChart },
+  { href: "/simulador", label: "Simulador", icon: IconPlay },
   { href: "/calculadora", label: "Capital libre", icon: IconCalc },
   { href: "/diario", label: "Diario", icon: IconBook },
   { href: "/reglas", label: "Reglas", icon: IconShield },
@@ -76,6 +77,13 @@ function IconChart({ activo }: { activo?: boolean }) {
       <path d="M4 19V5" />
       <path d="M4 19h16" />
       <path d="M7 15l4-5 3 3 5-7" />
+    </svg>
+  );
+}
+function IconPlay({ activo }: { activo?: boolean }) {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={activo ? 2 : 1.6} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 4l14 8-14 8V4z" />
     </svg>
   );
 }
