@@ -7,6 +7,7 @@ const NAV = [
   { href: "/dashboard", label: "Resumen", icon: IconHome },
   { href: "/operar", label: "Operar", icon: IconChart },
   { href: "/simulador", label: "Simulador", icon: IconPlay },
+  { href: "/simulador/nivel1", label: "Simulador 1", icon: IconPlay },
   { href: "/calculadora", label: "Capital libre", icon: IconCalc },
   { href: "/diario", label: "Diario", icon: IconBook },
   { href: "/reglas", label: "Reglas", icon: IconShield },

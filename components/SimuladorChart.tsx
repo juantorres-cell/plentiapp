@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { createChart, CandlestickSeries, IChartApi, ISeriesApi, CandlestickData } from "lightweight-charts";
+import { createChart, CandlestickSeries, ColorType, IChartApi, ISeriesApi, CandlestickData } from "lightweight-charts";
 
 export default function SimuladorChart({ data }: { data: CandlestickData[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -14,7 +14,7 @@ export default function SimuladorChart({ data }: { data: CandlestickData[] }) {
 
     const chart = createChart(containerRef.current, {
       autoSize: true,
-      layout: { background: { type: "solid" as const, color: "#0E1412" }, textColor: "#B7C0BA" },
+      layout: { background: { type: ColorType.Solid, color: "#0E1412" }, textColor: "#B7C0BA" },
       grid: { vertLines: { color: "#1B2420" }, horzLines: { color: "#1B2420" } },
       timeScale: { borderColor: "#24302A" },
       rightPriceScale: { borderColor: "#24302A" },
