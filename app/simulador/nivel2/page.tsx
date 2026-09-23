@@ -18,8 +18,46 @@ export default function Nivel2Page() {
   const [terminado, setTerminado] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
-  const escenario = ESCENARIOS_NIVEL2[indiceEscenario];
-  const esUltimoEscenario = indiceEscenario === ESCENARIOS_NIVEL2.length - 1;
+  // 👇 AQUÍ SE APLICA EL ORDEN MEZCLADO 👇
+  const [ordenEscenarios] = useState(() => [...ESCENARIOS_NIVEL2].sort(() => Math.random() - 0.5));
+  
+  const escenario = ordenEscenarios[indiceEscenario];
+  const esUltimoEscenario = indiceEscenario === ordenEscenarios.length - 1;
+  // 👆 FIN DEL ORDEN MEZCLADO 👆
+
+  const [escenarioActivo, setEscenarioActivo] = useState(escenario);
+  const [cargandoVariante, setCargandoVariante] = useState(true);
+
+  useEffect(() => {
+    let cancelado = false;
+    setCargandoVariante(true);
+
+    fetch("/api/generar-escenario", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ escenario_id: escenario.id }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelado) return;
+        if (data.ok) {
+          setEscenarioActivo({ ...escenario, velas: data.velas, media_movil: data.media_movil ?? escenario.media_movil });
+        } else {
+          setEscenarioActivo(escenario); // fallback silencioso a la versión fija
+        }
+        setCargandoVariante(false);
+      })
+      .catch(() => {
+        if (!cancelado) {
+          setEscenarioActivo(escenario);
+          setCargandoVariante(false);
+        }
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [indiceEscenario, escenario]); 
 
   useEffect(() => {
     async function verificar() {
@@ -111,8 +149,7 @@ export default function Nivel2Page() {
   }
 
   const correctas = decisiones.filter((d) => d.correcta).length;
-  const puntajeFinal =
-    decisiones.length > 0 ? Math.round((correctas / decisiones.length) * 100) : 0;
+  const puntajeFinal = decisiones.length > 0 ? Math.round((correctas / decisiones.length) * 100) : 0;
 
   return (
     <AppShell>
@@ -128,14 +165,21 @@ export default function Nivel2Page() {
           <>
             <p className="text-sm text-[#7C8A82] mb-6">{escenario.contexto_inicial}</p>
             <p className="text-[12px] text-[#7C8A82] mb-4">
-              Escenario {indiceEscenario + 1} de {ESCENARIOS_NIVEL2.length}
+              {/* 👇 AQUÍ SE ACTUALIZÓ A ordenEscenarios.length 👇 */}
+              Escenario {indiceEscenario + 1} de {ordenEscenarios.length}
             </p>
-            <SimuladorGuiadoChart
-              key={escenario.id}
-              escenario={escenario}
-              onDecision={registrarDecision}
-              onTerminarEscenario={manejarFinDeEscenario}
-            />
+            
+            {cargandoVariante ? (
+              <p className="text-sm text-[#7C8A82]">Preparando el escenario...</p>
+            ) : (
+              <SimuladorGuiadoChart
+                key={escenarioActivo.id + indiceEscenario} 
+                escenario={escenarioActivo}
+                onDecision={registrarDecision}
+                onTerminarEscenario={manejarFinDeEscenario}
+              />
+            )}
+            
           </>
         ) : (
           <div className="max-w-[600px] mx-auto text-center">

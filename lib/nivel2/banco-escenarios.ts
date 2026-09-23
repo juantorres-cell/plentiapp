@@ -113,4 +113,112 @@ export const ESCENARIOS_NIVEL2: EscenarioNivel2[] = [
       },
     ],
   },
+{
+  id: "n2-martillo-tras-noticia",
+  titulo: "El Martillo después de una caída por noticias",
+  contexto_inicial:
+    "Salió una noticia negativa y el precio cayó fuerte varios periodos. Observa qué pasa cuando llega a la zona de 150, un soporte que ya se había respetado antes.",
+  velas: [
+    { time: "2026-11-01", open: 175, high: 176, low: 168, close: 169 },
+    { time: "2026-11-02", open: 169, high: 170, low: 160, close: 161 },
+    { time: "2026-11-03", open: 161, high: 162, low: 152, close: 153 },
+    { time: "2026-11-04", open: 153, high: 154, low: 140, close: 151 },
+    { time: "2026-11-05", open: 151, high: 158, low: 150, close: 156 },
+  ],
+  checkpoints: [
+    {
+      indice_vela: 3,
+      patron_presente: "martillo",
+      mensaje_tutor:
+        "A pesar del pánico por la noticia, esta vela muestra una mecha larga hacia abajo y cerró cerca del máximo, justo en la zona de 150. ¿Qué harías?",
+      opciones_decision: ["comprar", "vender", "esperar"],
+      decision_correcta: "comprar",
+      microleccion_si_falla:
+        "El contexto (una mala noticia) genera miedo, pero la vela técnica sigue diciendo lo mismo: rechazo fuerte en soporte. Dejarte llevar por el pánico de la noticia en vez de leer la vela es justo el sesgo que buscamos que reconozcas.",
+    },
+  ],
+},
+{
+  id: "n2-envolvente-euforia",
+  titulo: "La Envolvente en medio de la euforia",
+  contexto_inicial:
+    "El precio lleva varios periodos subiendo con fuerza y todo el mundo habla de esta acción. Observa qué pasa cerca de 60, una resistencia previa.",
+  velas: [
+    { time: "2026-11-01", open: 40, high: 44, low: 39, close: 43 },
+    { time: "2026-11-02", open: 43, high: 48, low: 42, close: 47 },
+    { time: "2026-11-03", open: 47, high: 55, low: 46, close: 54 },
+    { time: "2026-11-04", open: 57, high: 58, low: 46, close: 47 },
+    { time: "2026-11-05", open: 47, high: 48, low: 40, close: 41 },
+  ],
+  checkpoints: [
+    {
+      indice_vela: 3,
+      patron_presente: "envolvente",
+      mensaje_tutor:
+        "Con todo el optimismo de las últimas velas, aparece esta vela roja que envuelve por completo a la anterior. ¿Qué harías?",
+      opciones_decision: ["comprar", "vender", "esperar"],
+      decision_correcta: "vender",
+      microleccion_si_falla:
+        "La euforia colectiva (FOMO) hace que sea tentador comprar 'porque todo sigue subiendo', pero la vela está mostrando lo contrario: los vendedores tomaron control total del periodo. Ese es justo el sesgo de euforia que este nivel busca enseñarte a detectar.",
+    },
+  ],
+},
+{
+  id: "n2-hch-cripto",
+  titulo: "Hombro-Cabeza-Hombro en un activo volátil",
+  contexto_inicial:
+    "Este activo se mueve en rangos más amplios que las acciones tradicionales. Observa la forma completa del patrón antes de decidir.",
+  velas: [
+    { time: "2026-11-01", open: 200, high: 240, low: 198, close: 235 },
+    { time: "2026-11-02", open: 235, high: 238, low: 210, close: 215 },
+    { time: "2026-11-03", open: 215, high: 270, low: 212, close: 260 },
+    { time: "2026-11-04", open: 260, high: 265, low: 212, close: 220 },
+    { time: "2026-11-05", open: 220, high: 242, low: 215, close: 230 },
+    { time: "2026-11-06", open: 230, high: 231, low: 190, close: 195 },
+  ],
+  checkpoints: [
+    {
+      indice_vela: 5,
+      patron_presente: "hombro_cabeza_hombro",
+      mensaje_tutor:
+        "El precio acaba de romper la línea de cuello con fuerza tras formar los dos hombros y la cabeza. ¿Qué harías?",
+      opciones_decision: ["comprar", "vender", "esperar"],
+      decision_correcta: "vender",
+      microleccion_si_falla:
+        "El patrón se cumple igual en un activo volátil que en uno tranquilo — lo único que cambia es el tamaño de los movimientos, no la lógica detrás de la señal.",
+    },
+  ],
+},
+{
+  id: "n2-media-movil-recuperacion",
+  titulo: "Cruce de Media Móvil tras una recuperación lenta",
+  contexto_inicial:
+    "El precio venía bajando, pero se ha ido estabilizando poco a poco. Observa qué pasa cuando finalmente cruza la media móvil.",
+  velas: [
+    { time: "2026-11-01", open: 80, high: 81, low: 75, close: 76 },
+    { time: "2026-11-02", open: 76, high: 78, low: 73, close: 74 },
+    { time: "2026-11-03", open: 74, high: 76, low: 71, close: 73 },
+    { time: "2026-11-04", open: 73, high: 79, low: 72, close: 78 },
+    { time: "2026-11-05", open: 78, high: 86, low: 77, close: 85 },
+  ],
+  media_movil: [
+    { time: "2026-11-01", value: 79 },
+    { time: "2026-11-02", value: 77.5 },
+    { time: "2026-11-03", value: 76 },
+    { time: "2026-11-04", value: 75 },
+    { time: "2026-11-05", value: 76 },
+  ],
+  checkpoints: [
+    {
+      indice_vela: 4,
+      patron_presente: "medias_moviles",
+      mensaje_tutor:
+        "Tras varios periodos débiles, el precio finalmente cruzó por encima de la media móvil. ¿Qué harías?",
+      opciones_decision: ["comprar", "vender", "esperar"],
+      decision_correcta: "comprar",
+      microleccion_si_falla:
+        "Una recuperación lenta que finalmente cruza su media móvil es una señal válida de cambio de dirección, aunque el camino hasta ahí se haya sentido incierto.",
+    },
+  ],
+},
 ];
