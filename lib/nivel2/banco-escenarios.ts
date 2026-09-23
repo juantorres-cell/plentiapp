@@ -15,6 +15,7 @@ export const ESCENARIOS_NIVEL2: EscenarioNivel2[] = [
       { time: "2026-09-04", open: 92, high: 93, low: 84, close: 91 },
       { time: "2026-09-05", open: 91, high: 96, low: 90, close: 95 },
     ],
+    nivel_referencia: { precio: 90, tipo: "soporte" },
     checkpoints: [
       {
         indice_vela: 3, // justo después del martillo
@@ -41,6 +42,7 @@ export const ESCENARIOS_NIVEL2: EscenarioNivel2[] = [
       { time: "2026-09-04", open: 108, high: 109, low: 100, close: 101 },
       { time: "2026-09-05", open: 101, high: 102, low: 95, close: 96 },
     ],
+    nivel_referencia: { precio: 110, tipo: "resistencia" },
     checkpoints: [
       {
         indice_vela: 3,
@@ -68,6 +70,7 @@ export const ESCENARIOS_NIVEL2: EscenarioNivel2[] = [
       // ↓ rompe el neckline (95) con fuerza
       { time: "2026-09-06", open: 99, high: 99, low: 88, close: 89 },
     ],
+    nivel_referencia: { precio: 95, tipo: "soporte", etiqueta: "Neckline" },
     checkpoints: [
       {
         indice_vela: 5,
@@ -125,6 +128,7 @@ export const ESCENARIOS_NIVEL2: EscenarioNivel2[] = [
     { time: "2026-11-04", open: 153, high: 154, low: 140, close: 151 },
     { time: "2026-11-05", open: 151, high: 158, low: 150, close: 156 },
   ],
+  nivel_referencia: { precio: 150, tipo: "soporte" },
   checkpoints: [
     {
       indice_vela: 3,
@@ -150,6 +154,7 @@ export const ESCENARIOS_NIVEL2: EscenarioNivel2[] = [
     { time: "2026-11-04", open: 57, high: 58, low: 46, close: 47 },
     { time: "2026-11-05", open: 47, high: 48, low: 40, close: 41 },
   ],
+  nivel_referencia: { precio: 60, tipo: "resistencia" },
   checkpoints: [
     {
       indice_vela: 3,
@@ -176,6 +181,7 @@ export const ESCENARIOS_NIVEL2: EscenarioNivel2[] = [
     { time: "2026-11-05", open: 220, high: 242, low: 215, close: 230 },
     { time: "2026-11-06", open: 230, high: 231, low: 190, close: 195 },
   ],
+  nivel_referencia: { precio: 212, tipo: "soporte", etiqueta: "Neckline" },
   checkpoints: [
     {
       indice_vela: 5,
@@ -221,4 +227,117 @@ export const ESCENARIOS_NIVEL2: EscenarioNivel2[] = [
     },
   ],
 },
+
+{
+  id: "n2-trampa-martillo-sin-historial",
+  titulo: "¿Es realmente un Martillo?",
+  contexto_inicial:
+    "El precio viene cayendo. Presta mucha atención: ¿este nivel de precio ya se había tocado antes, o es territorio completamente nuevo?",
+  es_trampa: true,
+  velas: [
+    { time: "2026-12-01", open: 150, high: 152, low: 145, close: 146 },
+    { time: "2026-12-02", open: 146, high: 147, low: 138, close: 139 },
+    { time: "2026-12-03", open: 139, high: 140, low: 130, close: 131 },
+    { time: "2026-12-04", open: 131, high: 132, low: 115, close: 130 },
+    { time: "2026-12-05", open: 130, high: 136, low: 129, close: 134 },
+  ],
+  checkpoints: [
+    {
+      indice_vela: 3,
+      patron_presente: "martillo",
+      mensaje_tutor:
+        "Esta vela tiene mecha larga hacia abajo y cerró cerca del máximo — la forma es de Martillo. Pero mira bien el historial: ¿este nivel de precio (115) ya se había tocado antes en este gráfico? ¿Qué harías?",
+      opciones_decision: ["comprar", "vender", "esperar"],
+      decision_correcta: "esperar",
+      microleccion_si_falla:
+        "La forma de la vela es correcta, pero un soporte real necesita historial: precio que ya rebotó ahí antes, más de una vez. Aquí el precio nunca había estado tan bajo — no hay ningún soporte confirmado, solo una vela con mecha larga en territorio nuevo. La forma sola no basta, necesitas el contexto.",
+    },
+  ],
+},
+{
+  id: "n2-trampa-envolvente-sin-reversion",
+  titulo: "¿Es realmente una Envolvente?",
+  contexto_inicial:
+    "Observa el color de las velas antes de decidir si hay una reversión real.",
+  es_trampa: true,
+  velas: [
+    { time: "2026-12-01", open: 100, high: 101, low: 95, close: 96 },
+    { time: "2026-12-02", open: 96, high: 97, low: 93, close: 94 },
+    { time: "2026-12-03", open: 94, high: 95, low: 85, close: 86 },
+    { time: "2026-12-04", open: 86, high: 88, low: 80, close: 82 },
+  ],
+  checkpoints: [
+    {
+      indice_vela: 2,
+      patron_presente: "envolvente",
+      mensaje_tutor:
+        "Esta vela roja tiene un cuerpo más grande que el de la vela anterior. ¿Es esto una Envolvente Bajista de reversión? ¿Qué harías?",
+      opciones_decision: ["comprar", "vender", "esperar"],
+      decision_correcta: "esperar",
+      microleccion_si_falla:
+        "Una Envolvente Bajista de reversión requiere que la vela anterior sea VERDE (alcista) — ahí es donde 'envuelve' y revierte el optimismo previo. Aquí la vela anterior ya era roja: esto no es una reversión, es solo continuación de la caída. No es una señal nueva, es la misma tendencia de siempre.",
+    },
+  ],
+},
+{
+  id: "n2-trampa-hch-asimetrico",
+  titulo: "¿Es realmente un Hombro-Cabeza-Hombro?",
+  contexto_inicial:
+    "Compara con cuidado la altura de los dos hombros antes de confiar en la ruptura.",
+  es_trampa: true,
+  velas: [
+    { time: "2026-12-01", open: 100, high: 103, low: 99, close: 102 },
+    { time: "2026-12-02", open: 102, high: 103, low: 98, close: 99 },
+    { time: "2026-12-03", open: 99, high: 140, low: 98, close: 135 },
+    { time: "2026-12-04", open: 135, high: 136, low: 110, close: 115 },
+    { time: "2026-12-05", open: 115, high: 128, low: 114, close: 127 },
+    { time: "2026-12-06", open: 127, high: 128, low: 105, close: 97 },
+  ],
+  checkpoints: [
+    {
+      indice_vela: 5,
+      patron_presente: "hombro_cabeza_hombro",
+      mensaje_tutor:
+        "El precio acaba de caer por debajo del nivel de los valles anteriores, después de una cabeza y dos 'hombros'. ¿Confías en esta ruptura?",
+      opciones_decision: ["comprar", "vender", "esperar"],
+      decision_correcta: "esperar",
+      microleccion_si_falla:
+        "Mira otra vez los dos hombros: el primero llegó apenas a 103, el segundo a 128 — son muy distintos en altura. Un H.C.H. confiable necesita hombros parecidos entre sí. Cuando son tan asimétricos, la 'ruptura' puede ser ruido del mercado, no una reversión real confirmada.",
+    },
+  ],
+},
+{
+  id: "n2-trampa-cruce-marginal",
+  titulo: "¿Es realmente un cruce confirmado?",
+  contexto_inicial:
+    "Mira con atención qué tan lejos cruzó el precio la media móvil, y cómo se ve la media misma.",
+  es_trampa: true,
+  velas: [
+    { time: "2026-12-01", open: 100, high: 101, low: 98, close: 99 },
+    { time: "2026-12-02", open: 99, high: 100, low: 97, close: 98 },
+    { time: "2026-12-03", open: 98, high: 99, low: 96, close: 97 },
+    { time: "2026-12-04", open: 97, high: 98, low: 95, close: 96 },
+    { time: "2026-12-05", open: 96, high: 97.3, low: 95.5, close: 97.1 },
+  ],
+  media_movil: [
+    { time: "2026-12-01", value: 99 },
+    { time: "2026-12-02", value: 98.5 },
+    { time: "2026-12-03", value: 98 },
+    { time: "2026-12-04", value: 97.5 },
+    { time: "2026-12-05", value: 97 },
+  ],
+  checkpoints: [
+    {
+      indice_vela: 4,
+      patron_presente: "medias_moviles",
+      mensaje_tutor:
+        "El precio acaba de cerrar apenas por encima de la media móvil, por un margen muy pequeño. ¿Confías en este cruce?",
+      opciones_decision: ["comprar", "vender", "esperar"],
+      decision_correcta: "esperar",
+      microleccion_si_falla:
+        "Un cruce por un margen tan pequeño (0.1 de diferencia) con una media que apenas se mueve es fácil que se revierta al siguiente periodo — se le llama 'whipsaw'. Es más prudente esperar una o dos velas más de confirmación antes de actuar, en vez de saltar apenas toca la línea.",
+    },
+  ],
+},
+
 ];

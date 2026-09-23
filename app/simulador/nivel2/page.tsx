@@ -18,18 +18,29 @@ export default function Nivel2Page() {
   const [terminado, setTerminado] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
-  // 👇 AQUÍ SE APLICA EL ORDEN MEZCLADO 👇
-  const [ordenEscenarios] = useState(() => [...ESCENARIOS_NIVEL2].sort(() => Math.random() - 0.5));
+  // AQUÍ SE APLICA EL ORDEN MEZCLADO
+  const [ordenEscenarios] = useState(() =>
+  [...ESCENARIOS_NIVEL2].sort(() => Math.random() - 0.5).slice(0, 8)
+  );
   
   const escenario = ordenEscenarios[indiceEscenario];
   const esUltimoEscenario = indiceEscenario === ordenEscenarios.length - 1;
-  // 👆 FIN DEL ORDEN MEZCLADO 👆
 
   const [escenarioActivo, setEscenarioActivo] = useState(escenario);
   const [cargandoVariante, setCargandoVariante] = useState(true);
 
+  // 👇 NUEVA LÓGICA DE TRAMPAS AQUÍ 👇
   useEffect(() => {
     let cancelado = false;
+
+    // Las trampas siempre usan la versión fija — su valor pedagógico depende
+    // de la asimetría/inconsistencia exacta que se diseñó a mano.
+    if (escenario.es_trampa) {
+      setEscenarioActivo(escenario);
+      setCargandoVariante(false);
+      return;
+    }
+
     setCargandoVariante(true);
 
     fetch("/api/generar-escenario", {
@@ -43,7 +54,7 @@ export default function Nivel2Page() {
         if (data.ok) {
           setEscenarioActivo({ ...escenario, velas: data.velas, media_movil: data.media_movil ?? escenario.media_movil });
         } else {
-          setEscenarioActivo(escenario); // fallback silencioso a la versión fija
+          setEscenarioActivo(escenario);
         }
         setCargandoVariante(false);
       })
@@ -58,6 +69,7 @@ export default function Nivel2Page() {
       cancelado = true;
     };
   }, [indiceEscenario, escenario]); 
+  // 👆 FIN DE LA NUEVA LÓGICA 👆
 
   useEffect(() => {
     async function verificar() {
@@ -165,7 +177,6 @@ export default function Nivel2Page() {
           <>
             <p className="text-sm text-[#7C8A82] mb-6">{escenario.contexto_inicial}</p>
             <p className="text-[12px] text-[#7C8A82] mb-4">
-              {/* 👇 AQUÍ SE ACTUALIZÓ A ordenEscenarios.length 👇 */}
               Escenario {indiceEscenario + 1} de {ordenEscenarios.length}
             </p>
             

@@ -39,3 +39,20 @@ export interface DecisionRegistrada {
   correcta: boolean;
   tiempo_decision_ms: number;
 }
+
+export interface NivelReferencia {
+  precio: number;
+  tipo: "soporte" | "resistencia";
+  etiqueta?: string; // ej. "Neckline" en vez de "Soporte"
+}
+
+export interface EscenarioNivel2 {
+  id: string;
+  titulo: string;
+  contexto_inicial: string;
+  velas: CandlestickData[];
+  checkpoints: Checkpoint[];
+  media_movil?: MediaMovilPunto[];
+  nivel_referencia?: NivelReferencia; // NUEVO
+  es_trampa?: boolean; // NUEVO — si es true, nunca se le pide variante a la IA
+}

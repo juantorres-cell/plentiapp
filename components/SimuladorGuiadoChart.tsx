@@ -56,6 +56,18 @@ export default function SimuladorGuiadoChart({
     chartRef.current = chart;
     seriesRef.current = series;
 
+    if (escenario.nivel_referencia) {
+        const { precio, tipo, etiqueta } = escenario.nivel_referencia;
+        series.createPriceLine({
+          price: precio,
+          color: tipo === "soporte" ? "#34D399" : "#E0605A",
+          lineWidth: 1,
+          lineStyle: 2, // punteada
+          axisLabelVisible: true,
+          title: etiqueta ?? (tipo === "soporte" ? "Soporte" : "Resistencia"),
+        });
+      }
+
     if (escenario.media_movil) {
       mediaRef.current = chart.addSeries(LineSeries, {
         color: "#7C8A82",
