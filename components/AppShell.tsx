@@ -3,12 +3,19 @@
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-const NAV = [
+const NAV_TOP = [
   { href: "/dashboard", label: "Resumen", icon: IconHome },
   { href: "/operar", label: "Operar", icon: IconChart },
-  { href: "/simulador", label: "Simulador", icon: IconPlay },
-  { href: "/simulador/nivel1", label: "Simulador 1", icon: IconPlay },
-  { href: "/simulador/nivel2", label: "Simulador 2", icon: IconPlay },
+];
+
+const SIMULADOR_NAV = [
+  { href: "/simulador", label: "Práctica libre" },
+  { href: "/simulador/nivel1", label: "Nivel 1 · Examen" },
+  { href: "/simulador/nivel2", label: "Nivel 2 · Guiado" },
+  { href: "/simulador/nivel3", label: "Nivel 3", proximamente: true },
+];
+
+const NAV_BOTTOM = [
   { href: "/calculadora", label: "Capital libre", icon: IconCalc },
   { href: "/diario", label: "Diario", icon: IconBook },
   { href: "/reglas", label: "Reglas", icon: IconShield },
@@ -31,7 +38,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             plenti<span className="text-[#34D399]">.trade</span>
           </div>
           <nav className="flex flex-col gap-1">
-            {NAV.map((item) => {
+            {NAV_TOP.map((item) => {
               const activo = pathname === item.href;
               return (
                 <a
@@ -48,6 +55,60 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </a>
               );
             })}
+
+            <div className="mt-4 mb-1 px-3 flex items-center gap-2 text-[11px] uppercase tracking-wide text-[#4C5B54]">
+              <IconPlay activo={false} />
+              Simulador
+            </div>
+            {SIMULADOR_NAV.map((item) => {
+              const activo = pathname === item.href;
+              if (item.proximamente) {
+                return (
+                  <div
+                    key={item.href}
+                    className="flex items-center justify-between pl-9 pr-3 py-2 rounded-md text-sm text-[#4C5B54] cursor-not-allowed"
+                  >
+                    {item.label}
+                    <span className="text-[10px] uppercase tracking-wide">
+                      Próximamente
+                    </span>
+                  </div>
+                );
+              }
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className={`pl-9 pr-3 py-2 rounded-md text-sm transition-colors ${
+                    activo
+                      ? "bg-[#12261B] text-[#34D399]"
+                      : "text-[#7C8A82] hover:text-[#E7ECE8] hover:bg-[#12261B]/40"
+                  }`}
+                >
+                  {item.label}
+                </a>
+              );
+            })}
+
+            <div className="mt-4 flex flex-col gap-1">
+              {NAV_BOTTOM.map((item) => {
+                const activo = pathname === item.href;
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
+                      activo
+                        ? "bg-[#12261B] text-[#34D399]"
+                        : "text-[#7C8A82] hover:text-[#E7ECE8] hover:bg-[#12261B]/40"
+                    }`}
+                  >
+                    <item.icon activo={activo} />
+                    {item.label}
+                  </a>
+                );
+              })}
+            </div>
           </nav>
         </div>
 
