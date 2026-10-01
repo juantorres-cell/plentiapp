@@ -16,9 +16,10 @@ const SIMULADOR_NAV = [
 ];
 
 const NAV_BOTTOM = [
-  { href: "/calculadora", label: "Capital libre", icon: IconCalc },
-  { href: "/diario", label: "Diario", icon: IconBook },
-  { href: "/reglas", label: "Reglas", icon: IconShield },
+     { href: "/calculadora", label: "Capital libre", icon: IconCalc },
+     { href: "/diario", label: "Diario", icon: IconBook },
+     { href: "/reglas", label: "Reglas", icon: IconShield },
+     { href: "/perfil", label: "Perfil", icon: IconUser },
 ];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -179,6 +180,15 @@ function IconLogout() {
       <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
       <path d="M16 17l5-5-5-5" />
       <path d="M21 12H9" />
+    </svg>
+  );
+}
+
+function IconUser({ activo }: { activo?: boolean }) {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={activo ? 2 : 1.6} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c0-4 3.5-7 8-7s8 3 8 7" />
     </svg>
   );
 }

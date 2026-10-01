@@ -16,10 +16,21 @@ export default function DashboardPage() {
   const [symbols, setSymbols] = useState<string[]>([]);
   const [nuevoSimbolo, setNuevoSimbolo] = useState("");
 
-  useEffect(() => {
+    useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) {
         router.push("/login");
+        return;
+      }
+
+      const { data: perfil } = await supabase
+        .from("profiles")
+        .select("capital_disponible, onboarding_completo")
+        .eq("id", data.session.user.id)
+        .single();
+
+      if (!perfil?.onboarding_completo) {
+        router.replace("/onboarding");
         return;
       }
 
@@ -35,12 +46,6 @@ export default function DashboardPage() {
         router.replace("/check-in");
         return;
       }
-
-      const { data: perfil } = await supabase
-        .from("profiles")
-        .select("capital_disponible")
-        .eq("id", data.session.user.id)
-        .single();
 
       const { data: listaWatchlist } = await supabase
         .from("watchlist")

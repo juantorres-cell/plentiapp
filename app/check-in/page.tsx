@@ -34,6 +34,17 @@ export default function CheckInPage() {
       const uid = sessionData.session.user.id;
       setUserId(uid);
 
+      const { data: perfil } = await supabase
+        .from("profiles")
+        .select("onboarding_completo")
+        .eq("id", uid)
+        .single();
+
+      if (!perfil?.onboarding_completo) {
+        router.replace("/onboarding");
+        return;
+      }
+
       const { data: existente } = await supabase
         .from("check_ins")
         .select("id")

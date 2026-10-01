@@ -43,6 +43,8 @@ export default function OperarPage() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState(false);
+  const [analisis, setAnalisis] = useState<string | null>(null);
+  const [analizando, setAnalizando] = useState(false);
 
   const semana = getSemanaActual();
 
@@ -168,6 +170,44 @@ export default function OperarPage() {
 
     setGuardando(false);
     setExito(true);
+  }
+
+    async function analizarOperacion() {
+    setAnalizando(true);
+    setAnalisis(null);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      const res = await fetch("/api/gestor-riesgo", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          semana,
+          activo,
+          cantidad: Number(cantidad) || 0,
+          tipoOrden,
+          regla1Activa: !!reglas?.regla_1_activa,
+          riesgoMaximo: reglas?.riesgo_maximo_pct ?? null,
+          pctRiesgo,
+          limitePortafolioActivo: !!reglas?.limite_portafolio_activa,
+          limitePortafolio: reglas?.limite_portafolio_pct ?? null,
+          pctPortafolio,
+          superaRegla1: !!superaRegla1,
+          confirmoRiesgo: confirmacionRiesgo,
+          yaOperoEstaSemana: !!reglas?.una_operacion_semana_activa && yaOperoEstaSemana,
+          justificacion,
+        }),
+      });
+      const json = await res.json();
+      setAnalisis(json.respuesta ?? "No se pudo obtener el análisis.");
+    } catch {
+      setAnalisis("No se pudo obtener el análisis. Puedes guardar tu operación igual.");
+    } finally {
+      setAnalizando(false);
+    }
   }
 
   if (exito) {
@@ -339,6 +379,27 @@ export default function OperarPage() {
             </div>
           </div>
         )}
+
+                <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
+          <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">Gestor de riesgo</h2>
+          <p className="text-[13px] text-[#7C8A82] mb-4">
+            Revisa tu operación con tu perfil y tu estado de ánimo. Es opcional y no bloquea el guardado.
+          </p>
+          <button
+            type="button"
+            onClick={analizarOperacion}
+            disabled={analizando || !activo || !Number(cantidad)}
+            className="px-5 py-2.5 border border-[#34D399] text-[#34D399] rounded text-sm font-medium disabled:opacity-40"
+          >
+            {analizando ? "Analizando..." : "Analizar mi operación"}
+          </button>
+          {analisis && (
+            <div className="mt-4 p-3.5 bg-[#12261B] rounded flex gap-2.5 items-start">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#34D399] mt-1.5 flex-shrink-0" />
+              <p className="text-[13px] leading-relaxed text-[#8FCBAA] m-0">{analisis}</p>
+            </div>
+          )}
+        </div>
 
         {error && <p className="text-[13px] text-[#E0605A] mb-4">{error}</p>}
 
