@@ -172,6 +172,17 @@ export default function OperarPage() {
     setExito(true);
   }
 
+        // Cuántas acciones caben en la regla: solo tiene sentido con base "capital_total"
+    // (con "capital_invertido" el % no depende de la cantidad).
+    const riesgoPorAccion = precioRef && Number(stopLoss) ? Math.abs(precioRef - Number(stopLoss)) : null;
+    const cantidadMaxima =
+      reglas?.regla_1_activa &&
+      reglas.base_calculo_riesgo === "capital_total" &&
+      riesgoPorAccion &&
+      Number(capitalDisponible) > 0
+        ? Math.floor((Number(capitalDisponible) * (reglas.riesgo_maximo_pct / 100)) / riesgoPorAccion)
+        : null;
+    
     async function analizarOperacion() {
     setAnalizando(true);
     setAnalisis(null);
@@ -192,6 +203,9 @@ export default function OperarPage() {
           regla1Activa: !!reglas?.regla_1_activa,
           riesgoMaximo: reglas?.riesgo_maximo_pct ?? null,
           pctRiesgo,
+          montoRiesgo,
+          cantidadMaxima,
+          stopLossSugerido,
           limitePortafolioActivo: !!reglas?.limite_portafolio_activa,
           limitePortafolio: reglas?.limite_portafolio_pct ?? null,
           pctPortafolio,
