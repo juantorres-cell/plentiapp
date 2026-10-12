@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getSemanaActual } from "@/lib/semana";
 import AppShell from "@/components/AppShell";
+import CalibradorAtr from "@/components/CalibradorAtr";
 
 type Estado = "bien" | "medio" | "mal";
 
@@ -241,7 +242,7 @@ export default function OperarPage() {
   return (
     <AppShell>
       <div className="max-w-[720px] mx-auto px-10 py-12">
-        <p className="text-[12px] uppercase tracking-wider text-[#34D399] font-medium mb-1">Semana del {semana}</p>
+        <p suppressHydrationWarning className="text-[12px] uppercase tracking-wider text-[#34D399] font-medium mb-1">Semana del {semana}</p>
         <h1 className="font-serif text-2xl text-[#E7ECE8] mb-8">Registro de operación</h1>
 
         <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
@@ -278,7 +279,7 @@ export default function OperarPage() {
                   onClick={() => setStopLoss(stopLossSugerido.toFixed(2))}
                   className="text-[11.5px] text-[#34D399] hover:underline mt-1"
                 >
-                  Sugerido según tu regla: ${stopLossSugerido.toFixed(2)} — usar este valor
+                  Stop más lejano que cumple tu regla: ${stopLossSugerido.toFixed(2)} — usar este valor
                 </button>
               )}
             </Campo>
@@ -311,6 +312,21 @@ export default function OperarPage() {
             {JSON.stringify(jsonGenerado, null, 2)}
           </pre>
         </div>
+        
+        <CalibradorAtr
+          activo={activo}
+          capital={Number(capitalDisponible) || null}
+          regla1Activa={!!reglas?.regla_1_activa}
+          riesgoPct={reglas?.riesgo_maximo_pct ?? 1}
+          baseRiesgo={reglas?.base_calculo_riesgo ?? "capital_total"}
+          topeActivo={!!reglas?.limite_portafolio_activa}
+          topePct={reglas?.limite_portafolio_pct ?? 5}
+          onUsar={({ stop, cantidad: c, precioRef }) => {
+            setStopLoss(stop);
+            setCantidad(c);
+            setPrecioReferencia(precioRef);
+          }}
+        />
 
         <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
           <h2 className="font-serif text-lg text-[#E7ECE8] mb-5">Cierre de la operación</h2>
@@ -385,9 +401,9 @@ export default function OperarPage() {
 
               {reglas.limite_portafolio_activa && (
                 pctPortafolio == null ? null : pctPortafolio <= reglas.limite_portafolio_pct ? (
-                  <AvisoRegla tipo="ok" texto={`Esta posición usa ${pctPortafolio.toFixed(1)}% de tu capital, dentro de tu límite de ${reglas.limite_portafolio_pct}%.`} />
+                  <AvisoRegla tipo="ok" texto={`Esta posición usa ${pctPortafolio.toFixed(2)}% de tu capital, dentro de tu límite de ${reglas.limite_portafolio_pct}%.`} />
                 ) : (
-                  <AvisoRegla tipo="alerta" texto={`Esta posición usaría ${pctPortafolio.toFixed(1)}% de tu capital, por encima de tu límite de ${reglas.limite_portafolio_pct}%.`} />
+                  <AvisoRegla tipo="alerta" texto={`Esta posición usaría ${pctPortafolio.toFixed(2)}% de tu capital, por encima de tu límite de ${reglas.limite_portafolio_pct}%.`} />
                 )
               )}
             </div>
