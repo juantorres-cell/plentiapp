@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AppShell from "@/components/AppShell";
+import type { Hipotesis } from "@/lib/operaciones";
 
 type Operacion = {
+  id: string;
+  estado: "abierta" | "cerrada";
   semana: string;
   fecha: string;
   activo: string | null;
@@ -13,6 +16,8 @@ type Operacion = {
   resultado: number | null;
   capital_final: number | null;
   leccion_aprendida: string | null;
+  hipotesis: Hipotesis | null;
+  hipotesis_cumplida: "si" | "no" | "no_evaluable" | null;
 };
 
 type CheckIn = {
@@ -22,6 +27,11 @@ type CheckIn = {
 };
 
 const EMOJI: Record<string, string> = { bien: "🙂", medio: "😐", mal: "😣" };
+const ETIQUETA_HIPOTESIS: Record<string, string> = {
+  si: "Hipótesis cumplida",
+  no: "Hipótesis no cumplida",
+  no_evaluable: "Hipótesis no evaluable",
+};
 
 export default function DiarioPage() {
   const router = useRouter();
@@ -40,7 +50,7 @@ export default function DiarioPage() {
 
       const { data: ops } = await supabase
         .from("operaciones")
-        .select("semana, fecha, activo, cantidad, resultado, capital_final, leccion_aprendida")
+        .select("id, estado, semana, fecha, activo, cantidad, resultado, capital_final, leccion_aprendida, hipotesis, hipotesis_cumplida")
         .eq("user_id", uid)
         .order("semana", { ascending: false });
 
@@ -49,7 +59,7 @@ export default function DiarioPage() {
         .select("semana, tipo, estado_animo")
         .eq("user_id", uid);
 
-      setOperaciones(ops ?? []);
+      setOperaciones((ops ?? []) as Operacion[]);
       setCheckIns(cis ?? []);
       setCargando(false);
     }
@@ -73,7 +83,9 @@ export default function DiarioPage() {
     );
   }
 
-  const operacionesConResultado = operaciones.filter((o) => o.resultado != null);
+  // Solo operaciones cerradas cuentan para resultados.
+  const operacionesConResultado = operaciones.filter((o) => o.estado === "cerrada" && o.resultado != null);
+  const abiertas = operaciones.filter((o) => o.estado === "abierta").length;
   const gananciaAcumulada = operacionesConResultado.reduce((acc, o) => acc + Number(o.resultado), 0);
   const semanasGanadoras = operacionesConResultado.filter((o) => Number(o.resultado) >= 0).length;
 
@@ -83,7 +95,7 @@ export default function DiarioPage() {
         <p className="text-[12px] uppercase tracking-wider text-[#34D399] font-medium mb-1">Historial</p>
         <h1 className="font-serif text-2xl text-[#E7ECE8] mb-8">Diario de trading</h1>
 
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-4 gap-4 mb-8">
           <div className="bg-[#121815] border border-[#24302A] rounded-lg p-5">
             <p className="text-[12px] text-[#7C8A82] mb-1.5">Semanas registradas</p>
             <p className="font-serif text-2xl text-[#E7ECE8]">{semanas.length}</p>
@@ -99,6 +111,10 @@ export default function DiarioPage() {
             <p className="font-serif text-2xl text-[#E7ECE8]">
               {semanasGanadoras} / {operacionesConResultado.length || 0}
             </p>
+          </div>
+          <div className="bg-[#121815] border border-[#24302A] rounded-lg p-5">
+            <p className="text-[12px] text-[#7C8A82] mb-1.5">Abiertas por cerrar</p>
+            <p className={`font-serif text-2xl ${abiertas > 0 ? "text-[#E0C088]" : "text-[#E7ECE8]"}`}>{abiertas}</p>
           </div>
         </div>
 
@@ -120,13 +136,25 @@ export default function DiarioPage() {
                 const op = operacion(semana);
                 const entrada = emocion(semana, "entrada");
                 const salida = emocion(semana, "salida");
+                const abierta = op?.estado === "abierta";
                 return (
                   <tr key={semana} className={`border-b border-[#1B2420] last:border-none ${i % 2 === 1 ? "bg-[#0E1412]" : ""}`}>
                     <td className="px-5 py-3.5 whitespace-nowrap font-medium text-[#E7ECE8]">{semana}</td>
                     <td className="px-3 py-3.5 text-lg text-center">{entrada ? EMOJI[entrada] : "—"}</td>
-                    <td className="px-5 py-3.5 text-[#E7ECE8]">{op?.activo ?? <span className="text-[#48544D]">—</span>}</td>
+                    <td className="px-5 py-3.5 text-[#E7ECE8]">
+                      {op?.activo ?? <span className="text-[#48544D]">—</span>}
+                      {abierta && op?.hipotesis?.me_equivoco_si && (
+                        <p className="m-0 mt-1 text-[11.5px] text-[#7C8A82] max-w-[200px]">
+                          Me equivoco si: {op.hipotesis.me_equivoco_si}
+                        </p>
+                      )}
+                    </td>
                     <td className="px-5 py-3.5 text-right">
-                      {op?.resultado != null ? (
+                      {abierta && op ? (
+                        <a href={`/operar/${op.id}/cerrar`} className="inline-block px-2.5 py-1 rounded-full text-[12.5px] font-medium bg-[#241E10] text-[#E0C088] hover:underline">
+                          Abierta · Cerrar →
+                        </a>
+                      ) : op?.resultado != null ? (
                         <span className={`inline-block px-2.5 py-1 rounded-full text-[12.5px] font-medium tabular-nums ${op.resultado >= 0 ? "bg-[#12261B] text-[#34D399]" : "bg-[#2A1815] text-[#E0605A]"}`}>
                           $ {op.resultado.toLocaleString("es-CO")}
                         </span>
@@ -138,7 +166,12 @@ export default function DiarioPage() {
                       {op?.capital_final != null ? `$ ${op.capital_final.toLocaleString("es-CO")}` : <span className="text-[#48544D]">—</span>}
                     </td>
                     <td className="px-3 py-3.5 text-lg text-center">{salida ? EMOJI[salida] : "—"}</td>
-                    <td className="px-5 py-3.5 text-[#7C8A82] max-w-[220px]">{op?.leccion_aprendida ?? <span className="text-[#48544D]">—</span>}</td>
+                    <td className="px-5 py-3.5 text-[#7C8A82] max-w-[220px]">
+                      {op?.leccion_aprendida ?? <span className="text-[#48544D]">—</span>}
+                      {op?.hipotesis_cumplida && (
+                        <p className="m-0 mt-1 text-[11.5px] text-[#48544D]">{ETIQUETA_HIPOTESIS[op.hipotesis_cumplida]}</p>
+                      )}
+                    </td>
                   </tr>
                 );
               })}

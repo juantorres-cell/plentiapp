@@ -65,6 +65,7 @@ export async function buildContext(
       .from("operaciones")
       .select("semana, activo, cantidad, capital_disponible, stop_loss, precio_referencia, resultado")
       .eq("user_id", uid)
+      .eq("estado", "cerrada")
       .order("semana", { ascending: false })
       .limit(50);
 

@@ -1,13 +1,15 @@
 "use client";
 
+// app/operar/page.tsx — PARTE 1: ABRIR la operación (viernes).
+// El cierre (resultado, check-out, lección) se hace después en /operar/[id]/cerrar.
+
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getSemanaActual } from "@/lib/semana";
 import AppShell from "@/components/AppShell";
-import CalibradorAtr from "@/components/CalibradorAtr";
-
-type Estado = "bien" | "medio" | "mal";
+import CalibradorAtr, { type SnapshotCalibrador } from "@/components/CalibradorAtr";
+import { numero, validarHipotesis, fechaRevisionPorDefecto, compararConCalibrador } from "@/lib/operaciones";
 
 type Reglas = {
   regla_1_activa: boolean;
@@ -20,6 +22,7 @@ type Reglas = {
 
 export default function OperarPage() {
   const router = useRouter();
+  const [semana, setSemana] = useState(""); // se calcula en el cliente para evitar errores de hidratación
   const [userId, setUserId] = useState<string | null>(null);
   const [reglas, setReglas] = useState<Reglas | null>(null);
   const [yaOperoEstaSemana, setYaOperoEstaSemana] = useState(false);
@@ -27,7 +30,6 @@ export default function OperarPage() {
   const [confirmacionRiesgo, setConfirmacionRiesgo] = useState(false);
 
   const [capitalDisponible, setCapitalDisponible] = useState("");
-  const [justificacion, setJustificacion] = useState("");
   const [activo, setActivo] = useState("");
   const [cantidad, setCantidad] = useState("");
   const [tipoOrden, setTipoOrden] = useState<"MARKET" | "LIMIT">("MARKET");
@@ -35,11 +37,13 @@ export default function OperarPage() {
   const [stopLoss, setStopLoss] = useState("");
   const [explicacionJson, setExplicacionJson] = useState("");
 
-  const [precioEjecucion, setPrecioEjecucion] = useState("");
-  const [resultado, setResultado] = useState("");
-  const [capitalFinal, setCapitalFinal] = useState("");
-  const [leccionAprendida, setLeccionAprendida] = useState("");
-  const [estadoSalida, setEstadoSalida] = useState<Estado | null>(null);
+  // Hipótesis (4 campos)
+  const [observo, setObservo] = useState("");
+  const [tesis, setTesis] = useState("");
+  const [meEquivoco, setMeEquivoco] = useState("");
+  const [cuandoReviso, setCuandoReviso] = useState("");
+
+  const [snapshot, setSnapshot] = useState<SnapshotCalibrador | null>(null);
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,9 +51,11 @@ export default function OperarPage() {
   const [analisis, setAnalisis] = useState<string | null>(null);
   const [analizando, setAnalizando] = useState(false);
 
-  const semana = getSemanaActual();
-
   useEffect(() => {
+    const s = getSemanaActual();
+    setSemana(s);
+    setCuandoReviso(fechaRevisionPorDefecto(s));
+
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) {
         router.push("/login");
@@ -79,14 +85,14 @@ export default function OperarPage() {
         });
       }
 
-      const { data: operacionExistente } = await supabase
+      const { data: existentes } = await supabase
         .from("operaciones")
-        .select("id")
+        .select("semana")
         .eq("user_id", data.session.user.id)
-        .eq("semana", semana)
-        .maybeSingle();
+        .eq("semana", s)
+        .limit(1);
 
-      setYaOperoEstaSemana(!!operacionExistente);
+      setYaOperoEstaSemana(!!existentes && existentes.length > 0);
     });
   }, [router]);
 
@@ -106,8 +112,6 @@ export default function OperarPage() {
   const precioRef = Number(precioReferencia) || (tipoOrden === "LIMIT" ? Number(precioLimite) : 0);
   const montoPosicion = precioRef ? precioRef * (Number(cantidad) || 0) : null;
 
-  // La base sobre la que se calcula el % de riesgo depende de lo elegido en /reglas:
-  // capital total de la cuenta, o solo el monto invertido en esta operación puntual.
   const capitalBase =
     reglas?.base_calculo_riesgo === "capital_invertido"
       ? montoPosicion
@@ -122,69 +126,89 @@ export default function OperarPage() {
       ? (montoPosicion / Number(capitalDisponible)) * 100
       : null;
 
-  // Stop loss sugerido: despeja la distancia máxima permitida a partir del riesgo máximo,
-  // y la resta del precio de referencia (asumiendo una posición larga / compra).
+  // Stop más lejano que todavía respeta la regla (no es un stop "ideal").
   const stopLossSugerido =
     reglas?.regla_1_activa && precioRef && Number(cantidad) > 0 && capitalBase
       ? Math.max(0, precioRef - (capitalBase * (reglas.riesgo_maximo_pct / 100)) / Number(cantidad))
       : null;
 
   const superaRegla1 = reglas?.regla_1_activa && pctRiesgo != null && pctRiesgo > reglas.riesgo_maximo_pct;
-  const puedeGuardar = !superaRegla1 || confirmacionRiesgo;
+
+  const riesgoPorAccion = precioRef && Number(stopLoss) ? Math.abs(precioRef - Number(stopLoss)) : null;
+  const cantidadMaxima =
+    reglas?.regla_1_activa &&
+    reglas.base_calculo_riesgo === "capital_total" &&
+    riesgoPorAccion &&
+    Number(capitalDisponible) > 0
+      ? Math.floor((Number(capitalDisponible) * (reglas.riesgo_maximo_pct / 100)) / riesgoPorAccion)
+      : null;
+
+  // --- Hipótesis ---
+  const hipotesis = { observo, tesis, me_equivoco_si: meEquivoco, cuando_reviso: cuandoReviso };
+  const { errores: erroresHipotesis, avisos: avisosHipotesis } = validarHipotesis(hipotesis);
+  const hipotesisIniciada = tesis.trim() !== "" || meEquivoco.trim() !== "";
+
+  const puedeGuardar = (!superaRegla1 || confirmacionRiesgo) && erroresHipotesis.length === 0 && !!semana;
 
   async function handleSubmit() {
-    if (!userId) return;
+    if (!userId || !semana) return;
     setError(null);
     setGuardando(true);
+
+    const sistema = snapshot
+      ? { cantidad: snapshot.posicion?.cantidad ?? null, stop_sugerido: snapshot.lectura.stop_sugerido ?? null }
+      : null;
+
+    const lecturaSistema = snapshot
+      ? {
+          ...snapshot,
+          usuario: {
+            cantidad: numero(cantidad),
+            stop_loss: numero(stopLoss),
+            siguio_calibrador: compararConCalibrador(
+              { cantidad: numero(cantidad), stop: numero(stopLoss) },
+              sistema
+            ),
+          },
+        }
+      : { calibrador_consultado: false };
+
+    // Resumen en texto para que el diario y el Gestor sigan leyendo "justificacion_estrategica".
+    const resumen = [
+      observo.trim() && `Observo: ${observo.trim()}`,
+      `Tesis: ${tesis.trim()}`,
+      `Me equivoco si: ${meEquivoco.trim()}`,
+    ]
+      .filter(Boolean)
+      .join(" | ");
 
     const { error: errorOperacion } = await supabase.from("operaciones").insert({
       user_id: userId,
       semana,
-      capital_disponible: Number(capitalDisponible) || null,
-      justificacion_estrategica: justificacion || null,
+      estado: "abierta",
+      capital_disponible: numero(capitalDisponible),
+      justificacion_estrategica: resumen,
+      hipotesis,
+      lectura_sistema: lecturaSistema,
       activo: activo || null,
-      cantidad: Number(cantidad) || null,
+      cantidad: numero(cantidad),
       tipo_orden: tipoOrden,
-      precio_limite: tipoOrden === "LIMIT" ? Number(precioLimite) || null : null,
-      stop_loss: Number(stopLoss) || null,
+      precio_limite: tipoOrden === "LIMIT" ? numero(precioLimite) : null,
+      stop_loss: numero(stopLoss),
       precio_referencia: precioRef || null,
       json_enviado: jsonGenerado,
       explicacion_json: explicacionJson || null,
-      precio_ejecucion: Number(precioEjecucion) || null,
-      resultado: Number(resultado) || null,
-      capital_final: Number(capitalFinal) || null,
-      leccion_aprendida: leccionAprendida || null,
     });
 
+    setGuardando(false);
     if (errorOperacion) {
-      setGuardando(false);
       setError(errorOperacion.message);
       return;
     }
-
-    if (estadoSalida) {
-      await supabase.from("check_ins").upsert(
-        { user_id: userId, semana, tipo: "salida", estado_animo: estadoSalida },
-        { onConflict: "user_id,semana,tipo" }
-      );
-    }
-
-    setGuardando(false);
     setExito(true);
   }
 
-        // Cuántas acciones caben en la regla: solo tiene sentido con base "capital_total"
-    // (con "capital_invertido" el % no depende de la cantidad).
-    const riesgoPorAccion = precioRef && Number(stopLoss) ? Math.abs(precioRef - Number(stopLoss)) : null;
-    const cantidadMaxima =
-      reglas?.regla_1_activa &&
-      reglas.base_calculo_riesgo === "capital_total" &&
-      riesgoPorAccion &&
-      Number(capitalDisponible) > 0
-        ? Math.floor((Number(capitalDisponible) * (reglas.riesgo_maximo_pct / 100)) / riesgoPorAccion)
-        : null;
-    
-    async function analizarOperacion() {
+  async function analizarOperacion() {
     setAnalizando(true);
     setAnalisis(null);
     try {
@@ -213,7 +237,7 @@ export default function OperarPage() {
           superaRegla1: !!superaRegla1,
           confirmoRiesgo: confirmacionRiesgo,
           yaOperoEstaSemana: !!reglas?.una_operacion_semana_activa && yaOperoEstaSemana,
-          justificacion,
+          justificacion: `${tesis} | Me equivoco si: ${meEquivoco}`,
         }),
       });
       const json = await res.json();
@@ -228,12 +252,23 @@ export default function OperarPage() {
   if (exito) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0B0F0E] p-10">
-        <div className="max-w-[380px] text-center">
-          <h2 className="font-serif text-2xl text-[#E7ECE8] mb-3">Operación registrada</h2>
-          <p className="text-sm text-[#7C8A82] mb-6">Quedó guardada en tu diario de trading de la semana del {semana}.</p>
-          <button onClick={() => router.push("/dashboard")} className="py-3 px-6 bg-[#34D399] text-[#0B0F0E] rounded text-sm font-medium">
-            Volver al dashboard
-          </button>
+        <div className="max-w-[420px] text-center">
+          <h2 className="font-serif text-2xl text-[#E7ECE8] mb-3">Operación abierta</h2>
+          <p className="text-sm text-[#7C8A82] mb-2">
+            Quedó guardada con tu hipótesis y lo que calculó el sistema, en la semana del {semana}.
+          </p>
+          <p className="text-sm text-[#7C8A82] mb-6">
+            Cuando tengas el resultado, ciérrala desde el diario: ahí registras el resultado, si tu hipótesis se
+            cumplió y cómo te sientes.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button onClick={() => router.push("/diario")} className="py-3 px-6 bg-[#34D399] text-[#0B0F0E] rounded text-sm font-medium">
+              Ir al diario
+            </button>
+            <button onClick={() => router.push("/dashboard")} className="py-3 px-6 border border-[#24302A] text-[#7C8A82] rounded text-sm">
+              Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -242,8 +277,13 @@ export default function OperarPage() {
   return (
     <AppShell>
       <div className="max-w-[720px] mx-auto px-10 py-12">
-        <p suppressHydrationWarning className="text-[12px] uppercase tracking-wider text-[#34D399] font-medium mb-1">Semana del {semana}</p>
-        <h1 className="font-serif text-2xl text-[#E7ECE8] mb-8">Registro de operación</h1>
+        <p className="text-[12px] uppercase tracking-wider text-[#34D399] font-medium mb-1">
+          {semana ? `Semana del ${semana}` : " "}
+        </p>
+        <h1 className="font-serif text-2xl text-[#E7ECE8] mb-2">Abrir operación</h1>
+        <p className="text-[13px] text-[#7C8A82] mb-8">
+          Aquí registras lo que vas a hacer y por qué. El resultado lo cierras después, desde el diario.
+        </p>
 
         <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
           <h2 className="font-serif text-lg text-[#E7ECE8] mb-5">Datos de la operación</h2>
@@ -256,10 +296,6 @@ export default function OperarPage() {
               <input value={activo} onChange={(e) => setActivo(e.target.value.toUpperCase())} placeholder="NVDA" className="input" />
             </Campo>
           </div>
-
-          <Campo label="Justificación estratégica">
-            <textarea value={justificacion} onChange={(e) => setJustificacion(e.target.value)} rows={2} className="input" />
-          </Campo>
 
           <div className="grid grid-cols-3 gap-4 my-4">
             <Campo label="Cantidad">
@@ -312,7 +348,7 @@ export default function OperarPage() {
             {JSON.stringify(jsonGenerado, null, 2)}
           </pre>
         </div>
-        
+
         <CalibradorAtr
           activo={activo}
           capital={Number(capitalDisponible) || null}
@@ -326,42 +362,50 @@ export default function OperarPage() {
             setCantidad(c);
             setPrecioReferencia(precioRef);
           }}
+          onLectura={setSnapshot}
         />
 
         <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
-          <h2 className="font-serif text-lg text-[#E7ECE8] mb-5">Cierre de la operación</h2>
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <Campo label="Precio de ejecución ($)">
-              <input type="number" value={precioEjecucion} onChange={(e) => setPrecioEjecucion(e.target.value)} className="input" />
-            </Campo>
-            <Campo label="Resultado ($)">
-              <input type="number" value={resultado} onChange={(e) => setResultado(e.target.value)} className="input" />
-            </Campo>
-            <Campo label="Capital final ($)">
-              <input type="number" value={capitalFinal} onChange={(e) => setCapitalFinal(e.target.value)} className="input" />
-            </Campo>
-          </div>
-          <Campo label="Lección aprendida (loopback)">
-            <textarea value={leccionAprendida} onChange={(e) => setLeccionAprendida(e.target.value)} rows={2} className="input" />
-          </Campo>
-        </div>
+          <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">Tu hipótesis</h2>
+          <p className="text-[13px] text-[#7C8A82] mb-5">
+            Una opinión se convierte en algo que se puede aprender cuando dices cómo sabrías que te equivocaste.
+          </p>
 
-        <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
-          <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">¿Cómo te sientes con este resultado?</h2>
-          <p className="text-[13px] text-[#7C8A82] mb-4">Opcional, pero cierra tu loopback emocional de la semana.</p>
-          <div className="flex gap-3">
-            {(["bien", "medio", "mal"] as Estado[]).map((e) => (
-              <button
-                key={e}
-                onClick={() => setEstadoSalida(e)}
-                className={`flex-1 py-2.5 rounded border text-sm capitalize ${
-                  estadoSalida === e ? "border-[#34D399] bg-[#12261B] text-[#34D399]" : "border-[#24302A] text-[#7C8A82]"
-                }`}
-              >
-                {e}
-              </button>
-            ))}
-          </div>
+          <Campo label="Qué observo (hechos con número)">
+            <textarea
+              value={observo}
+              onChange={(e) => setObservo(e.target.value)}
+              rows={2}
+              placeholder="Ej: cierre de $229.28, 3.2% sobre la media de 50 días, volumen 0.8× el promedio"
+              className="input"
+            />
+          </Campo>
+          <div className="h-3" />
+          <Campo label="Mi tesis (por qué, en tus palabras)">
+            <textarea value={tesis} onChange={(e) => setTesis(e.target.value)} rows={2} className="input" />
+          </Campo>
+          <div className="h-3" />
+          <Campo label="Me equivoco si… (condición concreta, con precio o fecha)">
+            <textarea
+              value={meEquivoco}
+              onChange={(e) => setMeEquivoco(e.target.value)}
+              rows={2}
+              placeholder="Ej: cierra una sesión por debajo de $X antes del viernes Y"
+              className="input"
+            />
+          </Campo>
+          <div className="h-3" />
+          <Campo label="Cuándo la reviso">
+            <input type="date" value={cuandoReviso} onChange={(e) => setCuandoReviso(e.target.value)} className="input" />
+          </Campo>
+
+          {hipotesisIniciada && avisosHipotesis.length > 0 && (
+            <div className="flex flex-col gap-2 mt-4">
+              {avisosHipotesis.map((a) => (
+                <AvisoRegla key={a} tipo="advertencia" texto={a} />
+              ))}
+            </div>
+          )}
         </div>
 
         {reglas && (reglas.regla_1_activa || reglas.limite_portafolio_activa || reglas.una_operacion_semana_activa) && (
@@ -393,7 +437,7 @@ export default function OperarPage() {
                         onChange={(e) => setConfirmacionRiesgo(e.target.checked)}
                         className="mt-0.5 accent-[#E0605A]"
                       />
-                      <span>Entiendo que esto supera mi regla del 1% y quiero continuar de todas formas.</span>
+                      <span>Entiendo que esto supera mi regla del {reglas.riesgo_maximo_pct}% y quiero continuar de todas formas.</span>
                     </label>
                   </>
                 )
@@ -410,7 +454,7 @@ export default function OperarPage() {
           </div>
         )}
 
-                <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
+        <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
           <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">Gestor de riesgo</h2>
           <p className="text-[13px] text-[#7C8A82] mb-4">
             Revisa tu operación con tu perfil y tu estado de ánimo. Es opcional y no bloquea el guardado.
@@ -434,7 +478,13 @@ export default function OperarPage() {
         {error && <p className="text-[13px] text-[#E0605A] mb-4">{error}</p>}
 
         <button onClick={handleSubmit} disabled={guardando || !puedeGuardar} className="w-full py-3.5 bg-[#34D399] text-[#0B0F0E] rounded text-sm font-medium disabled:opacity-50">
-          {guardando ? "Guardando..." : !puedeGuardar ? "Confirma el riesgo para guardar" : "Guardar operación"}
+          {guardando
+            ? "Guardando..."
+            : superaRegla1 && !confirmacionRiesgo
+            ? "Confirma el riesgo para guardar"
+            : erroresHipotesis.length > 0
+            ? "Completa tu tesis y “me equivoco si” para guardar"
+            : "Abrir operación"}
         </button>
       </div>
     </AppShell>

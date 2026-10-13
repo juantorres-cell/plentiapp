@@ -35,6 +35,20 @@ type Lectura = {
   fundamentales?: Fundamentales | null;
 };
 
+export type SnapshotCalibrador = {
+  generado_en: string;
+  lectura: Lectura;
+  posicion: null | {
+    cantidad: number;
+    limite_activo: "riesgo" | "tope_portafolio";
+    cantidad_por_riesgo: number;
+    cantidad_por_tope: number;
+    distancia_pct: number;
+    perdida_maxima_usd: number;
+    perdida_maxima_pct: number;
+  };
+};
+
 type Props = {
   activo: string;
   capital: number | null;
@@ -44,6 +58,8 @@ type Props = {
   topeActivo: boolean;
   topePct: number;
   onUsar: (v: { stop: string; cantidad: string; precioRef: string }) => void;
+  // Entrega la "foto" de lo que calculó el sistema, para guardarla junto a la operación.
+  onLectura?: (snap: SnapshotCalibrador | null) => void;
 };
 
 const MARKET_CAP_MINIMO = 10_000_000_000; // tu criterio: > $10 mil millones
@@ -69,6 +85,7 @@ export default function CalibradorAtr(p: Props) {
     setCargando(true);
     setFallo(null);
     setLectura(null);
+    p.onLectura?.(null);
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
@@ -77,7 +94,25 @@ export default function CalibradorAtr(p: Props) {
       });
       if (res.status === 401) throw new Error("Sesión no válida. Vuelve a iniciar sesión.");
       if (res.status === 400) throw new Error("Símbolo no válido.");
-      setLectura((await res.json()) as Lectura);
+      const json = (await res.json()) as Lectura;
+      setLectura(json);
+      const pp = posicionPara(json);
+      p.onLectura?.({
+        generado_en: new Date().toISOString(),
+        lectura: json,
+        posicion:
+          pp && pp.ok
+            ? {
+                cantidad: pp.cantidad,
+                limite_activo: pp.limiteActivo,
+                cantidad_por_riesgo: pp.cantidadPorRiesgo,
+                cantidad_por_tope: pp.cantidadPorTope,
+                distancia_pct: pp.distanciaPct,
+                perdida_maxima_usd: pp.perdidaMaximaUsd,
+                perdida_maxima_pct: pp.perdidaMaximaPct,
+              }
+            : null,
+      });
     } catch (e) {
       setFallo(e instanceof Error ? e.message : "No se pudo consultar.");
     } finally {
@@ -94,16 +129,19 @@ export default function CalibradorAtr(p: Props) {
 
   const reglaLimitaCantidad = p.regla1Activa && p.baseRiesgo === "capital_total";
 
-  const pos =
-    datosOk && p.capital
-      ? calcularPosicion({
-          capital: p.capital,
-          entrada: lectura!.ultimo_cierre!,
-          stop: lectura!.stop_sugerido!,
-          riesgoPct: reglaLimitaCantidad ? p.riesgoPct : 100,
-          topePct: p.topeActivo ? p.topePct : 100,
-        })
-      : null;
+  function posicionPara(l: Lectura | null) {
+    if (!l || (l.estado !== "ok" && l.estado !== "desactualizado")) return null;
+    if (l.ultimo_cierre == null || l.stop_sugerido == null || !p.capital) return null;
+    return calcularPosicion({
+      capital: p.capital,
+      entrada: l.ultimo_cierre,
+      stop: l.stop_sugerido,
+      riesgoPct: reglaLimitaCantidad ? p.riesgoPct : 100,
+      topePct: p.topeActivo ? p.topePct : 100,
+    });
+  }
+
+  const pos = datosOk ? posicionPara(lectura) : null;
 
   const ctx = datosOk ? lectura!.contexto : undefined;
   const fund = datosOk ? lectura!.fundamentales : undefined;
