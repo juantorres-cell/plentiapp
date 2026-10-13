@@ -7,6 +7,7 @@ export type QuoteCruda = {
   high: number | null;
   low: number | null;
   close: number | null;
+  volume?: number | null;
 };
 
 const TZ = "America/New_York";
@@ -38,7 +39,7 @@ export function limpiarVelas(
   ahora: Date = new Date()
 ): { velas: Vela[]; asOf: string | null; descartoParcial: boolean } {
   const filas = (quotes ?? [])
-    .map((q) => ({ t: new Date(q.date), high: q.high, low: q.low, close: q.close }))
+    .map((q) => ({ t: new Date(q.date), high: q.high, low: q.low, close: q.close, volume: q.volume }))
     .filter(
       (q) =>
         !isNaN(q.t.getTime()) &&
@@ -60,7 +61,12 @@ export function limpiarVelas(
 
   const asOf = filas.length ? fechaHoraNY(filas[filas.length - 1].t).fecha : null;
   return {
-    velas: filas.map((f) => ({ high: f.high as number, low: f.low as number, close: f.close as number })),
+    velas: filas.map((f) => ({
+      high: f.high as number,
+      low: f.low as number,
+      close: f.close as number,
+      ...(f.volume != null && isFinite(f.volume) && f.volume >= 0 ? { volume: f.volume } : {}),
+    })),
     asOf,
     descartoParcial,
   };

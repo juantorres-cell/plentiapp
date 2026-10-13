@@ -2,7 +2,7 @@
 // Capa 1: calibrador de riesgo. Funciones PURAS (sin red, sin Supabase, sin IA).
 // El código decide; nada aquí predice precios.
 
-export type Vela = { high: number; low: number; close: number };
+export type Vela = { high: number; low: number; close: number; volume?: number };
 
 /**
  * ATR de Wilder. Necesita al menos (periodo + 1) velas ordenadas de la más

@@ -48,4 +48,15 @@ assert.equal(r.asOf, null);
 assert.equal(fechaHoraNY(new Date("2026-10-16T15:00:00Z")).hora, 11);
 assert.equal(diasEntre("2026-10-10", "2026-10-16"), 6);
 
+// El volumen se conserva si es válido y se omite si es nulo
+r = limpiarVelas(
+  [
+    { date: "2026-10-14T13:30:00Z", high: 10, low: 9, close: 9.5, volume: 1234 },
+    { date: "2026-10-15T13:30:00Z", high: 10, low: 9, close: 9.6, volume: null },
+  ],
+  new Date("2026-10-17T15:00:00Z")
+);
+assert.equal(r.velas[0].volume, 1234);
+assert.equal(r.velas[1].volume, undefined);
+
 console.log("OK: pruebas de velas pasaron");
