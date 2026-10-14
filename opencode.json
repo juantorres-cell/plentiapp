@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "ignore": [
+    "node_modules",
+    ".next",
+    "package-lock.json",
+    "out",
+    "build",
+    "coverage",
+    ".env",
+    ".env.local",
+    ".env.*",
+    ".vercel"
+  ]
+}
