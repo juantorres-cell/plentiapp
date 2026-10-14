@@ -123,3 +123,27 @@ Extend `contextoTecnico` in `lib/riesgo/contexto.ts`. Returns `{ estado: "ok" | 
 - `DECISIONES.md` — Immutable trading rule decisions (stop k=4.5, weekly cadence, etc.). Changes require dated entry.
 - `lib/riesgo/calibrador.ts` — Single source of truth for position sizing math.
 - `app/api/gestor-riesgo/route.ts` — Risk manager prompt (most complex AI interaction).
+
+## Convenciones que ya causaron bugs
+- API routes: el archivo se llama exactamente `route.ts` (si no, 404 silencioso).
+- lightweight-charts: `ColorType.Solid` (enum), nunca `"solid" as const`. Crear el chart una vez; actualizar datos en un efecto aparte.
+- Tipos de checkpoint: importar de `lib/nivel2/tipos.ts`, nunca sintaxis genérica inline en `.tsx` (rompe con Turbopack).
+- La carpeta es `lib/nivel1` (sin espacio). El repo no tiene `src/`.
+- La semana se calcula en un `useEffect`, NO en el render (evita error de hidratación). El lint `set-state-in-effect` sobre esto es esperado: no moverlo al render.
+- Env vars nuevas: también en Vercel (nivel proyecto) + Redeploy. Llaves privadas sin `NEXT_PUBLIC_`.
+- No usar `npm audit fix --force`. `yahoo-finance2` no es oficial y puede fallar.
+
+## Base de datos
+- `profiles`: PK es `id` (no `user_id`); solo UPDATE (el trigger inserta la fila).
+- `operaciones`: sin política DELETE (se borra desde el SQL Editor; usar Ctrl+A antes de ejecutar; sin comillas tipográficas).
+
+## Reglas del curso (JSON de órdenes)
+- Solo BUY/SELL/CLOSE; MARKET/LIMIT; LIMIT exige `limit_price`.
+- Sin cortos, apalancamiento ni fraccionarios. No vender más de lo que se tiene.
+- Envío los viernes antes de las 10:00 (Bogotá); el último correo válido reemplaza al anterior.
+
+## Reglas de producto y de trabajo
+- El código decide, la IA explica. La IA nunca predice precios ni recomienda comprar/vender.
+- Etiquetas conductuales, no clínicas. Paleta oscura fija (ver DECISIONES.md). Responder en español.
+- No inventar el contenido de archivos no vistos: pedirlos antes de editar.
+- Lo que no se pueda ejecutar (Supabase, Yahoo, Gemini) se marca "sin probar".
