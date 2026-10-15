@@ -195,7 +195,7 @@ function ReglaCard({
         >
           <span
             className={`absolute top-0.5 w-5 h-5 rounded-full bg-[#0B0F0E] transition-transform ${
-              activa ? "translate-x-5" : "translate-x-0.5"
+              activa ? "right-0.5" : "left-0.5"
             }`}
           />
         </button>
