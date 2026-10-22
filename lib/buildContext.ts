@@ -10,6 +10,7 @@ type FilaOperacion = {
   stop_loss: number | null;
   precio_referencia: number | null;
   resultado: number | null;
+  emocion_entrada: Estado | null;
 };
 
 type FilaCheckIn = { semana: string; estado_animo: Estado };
@@ -63,10 +64,12 @@ export async function buildContext(
 
     const { data: opsDesc } = await supabase
       .from("operaciones")
-      .select("semana, activo, cantidad, capital_disponible, stop_loss, precio_referencia, resultado")
+      .select("semana, activo, cantidad, capital_disponible, stop_loss, precio_referencia, resultado, emocion_entrada")
       .eq("user_id", uid)
       .eq("estado", "cerrada")
       .order("semana", { ascending: false })
+      .order("fecha", { ascending: false })
+      .order("cerrada_en", { ascending: false, nullsFirst: false })
       .limit(50);
 
     const { data: checkIns } = await supabase
@@ -117,7 +120,7 @@ export async function buildContext(
       }
 
       // Rendimiento según el estado de ánimo de esa semana.
-      const estado = estadoPorSemana.get(op.semana);
+      const estado = op.emocion_entrada ?? estadoPorSemana.get(op.semana);
       if (estado && res != null) {
         const e = (porEstado[estado] ??= { n: 0, suma: 0, perdidas: 0 });
         e.n++;
@@ -158,7 +161,7 @@ export async function buildContext(
         semana: op.semana,
         activo: op.activo,
         resultado: op.resultado,
-        estado_animo: estadoPorSemana.get(op.semana) ?? "sin registrar",
+        estado_animo: op.emocion_entrada ?? estadoPorSemana.get(op.semana) ?? "sin registrar",
       })),
     };
   } catch (error) {

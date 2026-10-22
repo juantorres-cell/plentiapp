@@ -20,6 +20,8 @@ type Operacion = {
   leccion_aprendida: string | null;
   hipotesis: Hipotesis | null;
   hipotesis_cumplida: Cumplida | null;
+  emocion_entrada: "bien" | "medio" | "mal" | null;
+  emocion_salida: "bien" | "medio" | "mal" | null;
 };
 
 type CheckIn = {
@@ -28,11 +30,18 @@ type CheckIn = {
   estado_animo: "bien" | "medio" | "mal";
 };
 
+type SinOperar = {
+  semana: string;
+  motivo: string;
+  emocion: "bien" | "medio" | "mal" | null;
+};
+
 // Una fila de la tabla: una operación, o una semana sin operación.
 type Fila = {
   key: string;
   semana: string;
   op: Operacion | null;
+  sin: SinOperar | null;
 };
 
 // Estado del formulario de edición (campos como texto para poder escribir libremente).
@@ -67,6 +76,7 @@ export default function DiarioPage() {
   const [cargando, setCargando] = useState(true);
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
+  const [sinOperar, setSinOperar] = useState<SinOperar[]>([]);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [edicion, setEdicion] = useState<Edicion | null>(null);
   const [errorEdicion, setErrorEdicion] = useState<string | null>(null);
@@ -83,7 +93,7 @@ export default function DiarioPage() {
 
       const { data: ops } = await supabase
         .from("operaciones")
-        .select("id, estado, semana, fecha, activo, cantidad, resultado, capital_final, leccion_aprendida, hipotesis, hipotesis_cumplida")
+        .select("id, estado, semana, fecha, activo, cantidad, resultado, capital_final, leccion_aprendida, hipotesis, hipotesis_cumplida, emocion_entrada, emocion_salida")
         .eq("user_id", uid)
         .order("semana", { ascending: false });
 
@@ -92,6 +102,12 @@ export default function DiarioPage() {
         .select("semana, tipo, estado_animo")
         .eq("user_id", uid);
 
+      const { data: sin } = await supabase
+        .from("semanas_sin_operar")
+        .select("semana, motivo, emocion")
+        .eq("user_id", uid);
+
+      setSinOperar((sin ?? []) as SinOperar[]);
       setOperaciones((ops ?? []) as Operacion[]);
       setCheckIns(cis ?? []);
       setCargando(false);
@@ -199,7 +215,7 @@ export default function DiarioPage() {
     setEdicion(null);
   }
 
-  const semanas = Array.from(new Set([...operaciones.map((o) => o.semana), ...checkIns.map((c) => c.semana)])).sort((a, b) => (a < b ? 1 : -1));
+  const semanas = Array.from(new Set([...operaciones.map((o) => o.semana), ...checkIns.map((c) => c.semana), ...sinOperar.map((s) => s.semana)])).sort((a, b) => (a < b ? 1 : -1));
 
   function emocion(semana: string, tipo: "entrada" | "salida") {
     return checkIns.find((c) => c.semana === semana && c.tipo === tipo)?.estado_animo ?? null;
@@ -211,9 +227,9 @@ export default function DiarioPage() {
       .filter((o) => o.semana === semana)
       .sort((a, b) => (b.fecha ?? "").localeCompare(a.fecha ?? ""));
     if (opsSemana.length === 0) {
-      return [{ key: `sin-op-${semana}`, semana, op: null }];
+      return [{ key: `sin-op-${semana}`, semana, op: null, sin: sinOperar.find((s) => s.semana === semana) ?? null }];
     }
-    return opsSemana.map((op) => ({ key: op.id, semana, op }));
+    return opsSemana.map((op) => ({ key: op.id, semana, op, sin: null }));
   });
 
   if (cargando) {
@@ -285,15 +301,17 @@ export default function DiarioPage() {
             <tbody>
               {filas.map((fila, i) => {
                 const { op, semana } = fila;
-                const entrada = emocion(semana, "entrada");
-                const salida = emocion(semana, "salida");
                 const abierta = op?.estado === "abierta";
+                const entrada = op?.emocion_entrada ?? fila.sin?.emocion ?? emocion(semana, "entrada");
+                const salida = op
+                  ? op.emocion_salida ?? (abierta ? null : emocion(semana, "salida"))
+                  : emocion(semana, "salida");
                 return (
                   <tr key={fila.key} className={`border-b border-[#1B2420] last:border-none ${i % 2 === 1 ? "bg-[#0E1412]" : ""}`}>
                     <td className="px-5 py-3.5 whitespace-nowrap font-medium text-[#E7ECE8]">{semana}</td>
                     <td className="px-3 py-3.5 text-lg text-center">{entrada ? EMOJI[entrada] : "—"}</td>
                     <td className="px-5 py-3.5 text-[#E7ECE8]">
-                      {op?.activo ?? <span className="text-[#48544D]">—</span>}
+                      {op?.activo ?? (fila.sin ? <span className="inline-block px-2.5 py-1 rounded-full text-[12px] bg-[#0E1412] text-[#7C8A82] border border-[#24302A]">No operé</span> : <span className="text-[#48544D]">—</span>)}
                       {abierta && op?.hipotesis?.me_equivoco_si && (
                         <p className="m-0 mt-1 text-[11.5px] text-[#7C8A82] max-w-[200px]">
                           Me equivoco si: {op.hipotesis.me_equivoco_si}
@@ -318,7 +336,7 @@ export default function DiarioPage() {
                     </td>
                     <td className="px-3 py-3.5 text-lg text-center">{salida ? EMOJI[salida] : "—"}</td>
                     <td className="px-5 py-3.5 text-[#7C8A82] max-w-[220px]">
-                      {op?.leccion_aprendida ?? <span className="text-[#48544D]">—</span>}
+                      {op?.leccion_aprendida ?? (fila.sin ? `Motivo: ${fila.sin.motivo}` : <span className="text-[#48544D]">—</span>)}
                       {op?.hipotesis_cumplida && (
                         <p className="m-0 mt-1 text-[11.5px] text-[#48544D]">{ETIQUETA_HIPOTESIS[op.hipotesis_cumplida]}</p>
                       )}

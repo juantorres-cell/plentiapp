@@ -83,6 +83,7 @@ export default function CerrarOperacionPage() {
         capital_final: numero(capitalFinal),
         hipotesis_cumplida: cumplida,
         leccion_aprendida: leccion.trim(),
+        emocion_salida: estadoSalida,
       })
       .eq("id", op.id)
       .eq("user_id", userId)

@@ -20,6 +20,8 @@ type Reglas = {
   una_operacion_semana_activa: boolean;
 };
 
+type Estado = "bien" | "medio" | "mal";
+
 export default function OperarPage() {
   const router = useRouter();
   const [semana, setSemana] = useState(""); // se calcula en el cliente para evitar errores de hidratación
@@ -44,6 +46,11 @@ export default function OperarPage() {
   const [cuandoReviso, setCuandoReviso] = useState("");
 
   const [snapshot, setSnapshot] = useState<SnapshotCalibrador | null>(null);
+  const [emocionEntrada, setEmocionEntrada] = useState<Estado | null>(null);
+  const [motivoSinOperar, setMotivoSinOperar] = useState("");
+  const [guardandoSinOperar, setGuardandoSinOperar] = useState(false);
+  const [errorSinOperar, setErrorSinOperar] = useState<string | null>(null);
+  const [exitoSinOperar, setExitoSinOperar] = useState(false);
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -190,6 +197,7 @@ export default function OperarPage() {
       justificacion_estrategica: resumen,
       hipotesis,
       lectura_sistema: lecturaSistema,
+      emocion_entrada: emocionEntrada,
       activo: activo || null,
       cantidad: numero(cantidad),
       tipo_orden: tipoOrden,
@@ -206,6 +214,39 @@ export default function OperarPage() {
       return;
     }
     setExito(true);
+  }
+
+  const puedeRegistrarSinOperar = motivoSinOperar.trim().length >= 10 && !!semana;
+
+  async function registrarSinOperar() {
+    if (!userId || !semana || !puedeRegistrarSinOperar) return;
+    setErrorSinOperar(null);
+    setGuardandoSinOperar(true);
+
+    const { data, error: errSin } = await supabase
+      .from("semanas_sin_operar")
+      .upsert(
+        {
+          user_id: userId,
+          semana,
+          motivo: motivoSinOperar.trim(),
+          emocion: emocionEntrada,
+          lectura_sistema: snapshot ?? { calibrador_consultado: false },
+        },
+        { onConflict: "user_id,semana" }
+      )
+      .select("id");
+
+    setGuardandoSinOperar(false);
+    if (errSin) {
+      setErrorSinOperar(errSin.message);
+      return;
+    }
+    if (!data || data.length === 0) {
+      setErrorSinOperar("No se guardó nada. Revisa las políticas RLS de semanas_sin_operar.");
+      return;
+    }
+    setExitoSinOperar(true);
   }
 
   async function analizarOperacion() {
@@ -247,6 +288,27 @@ export default function OperarPage() {
     } finally {
       setAnalizando(false);
     }
+  }
+
+  if (exitoSinOperar) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0B0F0E] p-10">
+        <div className="max-w-[420px] text-center">
+          <h2 className="font-serif text-2xl text-[#E7ECE8] mb-3">Semana registrada sin operar</h2>
+          <p className="text-sm text-[#7C8A82] mb-6">
+            Quedó guardado tu motivo y lo que mostraba el calibrador, en la semana del {semana}.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button onClick={() => router.push("/diario")} className="py-3 px-6 bg-[#34D399] text-[#0B0F0E] rounded text-sm font-medium">
+              Ir al diario
+            </button>
+            <button onClick={() => router.push("/dashboard")} className="py-3 px-6 border border-[#24302A] text-[#7C8A82] rounded text-sm">
+              Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (exito) {
@@ -408,6 +470,27 @@ export default function OperarPage() {
           )}
         </div>
 
+        <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
+          <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">¿Cómo te sientes al abrirla?</h2>
+          <p className="text-[13px] text-[#7C8A82] mb-4">
+            Opcional. Es tu estado para esta operación, distinto del check-in semanal.
+          </p>
+          <div className="flex gap-3">
+            {(["bien", "medio", "mal"] as Estado[]).map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => setEmocionEntrada(e)}
+                className={`flex-1 py-2.5 rounded border text-sm capitalize ${
+                  emocionEntrada === e ? "border-[#34D399] bg-[#12261B] text-[#34D399]" : "border-[#24302A] text-[#7C8A82]"
+                }`}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {reglas && (reglas.regla_1_activa || reglas.limite_portafolio_activa || reglas.una_operacion_semana_activa) && (
           <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -473,6 +556,31 @@ export default function OperarPage() {
               <p className="text-[13px] leading-relaxed text-[#8FCBAA] m-0">{analisis}</p>
             </div>
           )}
+        </div>
+
+        <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
+          <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">¿Esta semana no vas a operar?</h2>
+          <p className="text-[13px] text-[#7C8A82] mb-4">
+            Registra tu decisión. Se guarda lo que muestra el calibrador (si lo consultaste) y tu estado de ánimo (si lo elegiste arriba).
+          </p>
+          <Campo label="Motivo (mínimo una frase concreta) *">
+            <textarea
+              value={motivoSinOperar}
+              onChange={(e) => setMotivoSinOperar(e.target.value)}
+              rows={2}
+              placeholder="Ej: no logré formular un “me equivoco si” concreto para ninguna acción"
+              className="input"
+            />
+          </Campo>
+          {errorSinOperar && <p className="text-[13px] text-[#E0605A] mt-3">{errorSinOperar}</p>}
+          <button
+            type="button"
+            onClick={registrarSinOperar}
+            disabled={guardandoSinOperar || !puedeRegistrarSinOperar}
+            className="mt-4 px-5 py-2.5 border border-[#34D399] text-[#34D399] rounded text-sm font-medium disabled:opacity-40"
+          >
+            {guardandoSinOperar ? "Guardando..." : "Registrar que no opero"}
+          </button>
         </div>
 
         {error && <p className="text-[13px] text-[#E0605A] mb-4">{error}</p>}
