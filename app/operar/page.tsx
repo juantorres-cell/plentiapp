@@ -21,6 +21,7 @@ type Reglas = {
 };
 
 type Estado = "bien" | "medio" | "mal";
+type Modo = "operar" | "no_operar";
 
 export default function OperarPage() {
   const router = useRouter();
@@ -51,6 +52,9 @@ export default function OperarPage() {
   const [guardandoSinOperar, setGuardandoSinOperar] = useState(false);
   const [errorSinOperar, setErrorSinOperar] = useState<string | null>(null);
   const [exitoSinOperar, setExitoSinOperar] = useState(false);
+  const [modo, setModo] = useState<Modo>("operar");
+  const [yaOperoCargado, setYaOperoCargado] = useState(false);
+  const [cargandoEstado, setCargandoEstado] = useState(true);
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,6 +104,8 @@ export default function OperarPage() {
         .limit(1);
 
       setYaOperoEstaSemana(!!existentes && existentes.length > 0);
+      setYaOperoCargado(true);
+      setCargandoEstado(false);
     });
   }, [router]);
 
@@ -216,6 +222,7 @@ export default function OperarPage() {
     setExito(true);
   }
 
+  const modoEfectivo: Modo = yaOperoEstaSemana ? "operar" : modo;
   const puedeRegistrarSinOperar = motivoSinOperar.trim().length >= 10 && !!semana;
 
   async function registrarSinOperar() {
@@ -342,11 +349,37 @@ export default function OperarPage() {
         <p className="text-[12px] uppercase tracking-wider text-[#34D399] font-medium mb-1">
           {semana ? `Semana del ${semana}` : " "}
         </p>
-        <h1 className="font-serif text-2xl text-[#E7ECE8] mb-2">Abrir operación</h1>
+        <h1 className="font-serif text-2xl text-[#E7ECE8] mb-2">
+          {modoEfectivo === "operar" ? "Abrir operación" : "Registrar semana sin operar"}
+        </h1>
         <p className="text-[13px] text-[#7C8A82] mb-8">
           Aquí registras lo que vas a hacer y por qué. El resultado lo cierras después, desde el diario.
         </p>
 
+        {yaOperoCargado && !yaOperoEstaSemana && (
+          <div className="flex gap-3 mb-8">
+            {([["operar", "Voy a operar"], ["no_operar", "No voy a operar"]] as [Modo, string][]).map(([valor, texto]) => (
+              <button
+                key={valor}
+                type="button"
+                onClick={() => setModo(valor)}
+                className={`flex-1 py-2.5 rounded border text-sm ${
+                  modoEfectivo === valor ? "border-[#34D399] bg-[#12261B] text-[#34D399]" : "border-[#24302A] text-[#7C8A82]"
+                }`}
+              >
+                {texto}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {yaOperoCargado && yaOperoEstaSemana && (
+          <p className="text-[12.5px] text-[#7C8A82] mb-8">
+            Ya tienes una operación registrada esta semana, por eso no se ofrece “No voy a operar”.
+          </p>
+        )}
+
+        {modoEfectivo === "operar" && (
         <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
           <h2 className="font-serif text-lg text-[#E7ECE8] mb-5">Datos de la operación</h2>
 
@@ -410,6 +443,19 @@ export default function OperarPage() {
             {JSON.stringify(jsonGenerado, null, 2)}
           </pre>
         </div>
+        )}
+
+        {modoEfectivo === "no_operar" && (
+          <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
+            <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">¿Qué acción considerabas?</h2>
+            <p className="text-[13px] text-[#7C8A82] mb-4">
+              Opcional. Si la escribes, el calibrador guarda lo que el sistema decía de ella.
+            </p>
+            <Campo label="Activo / acción">
+              <input value={activo} onChange={(e) => setActivo(e.target.value.toUpperCase())} placeholder="NVDA" className="input" />
+            </Campo>
+          </div>
+        )}
 
         <CalibradorAtr
           activo={activo}
@@ -427,6 +473,7 @@ export default function OperarPage() {
           onLectura={setSnapshot}
         />
 
+        {modoEfectivo === "operar" && (
         <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
           <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">Tu hipótesis</h2>
           <p className="text-[13px] text-[#7C8A82] mb-5">
@@ -469,11 +516,14 @@ export default function OperarPage() {
             </div>
           )}
         </div>
+        )}
 
         <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
-          <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">¿Cómo te sientes al abrirla?</h2>
+          <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">
+            {modoEfectivo === "operar" ? "¿Cómo te sientes al abrirla?" : "¿Cómo te sientes con esta decisión?"}
+          </h2>
           <p className="text-[13px] text-[#7C8A82] mb-4">
-            Opcional. Es tu estado para esta operación, distinto del check-in semanal.
+            Opcional. Es tu estado en este momento, distinto del check-in semanal.
           </p>
           <div className="flex gap-3">
             {(["bien", "medio", "mal"] as Estado[]).map((e) => (
@@ -491,7 +541,7 @@ export default function OperarPage() {
           </div>
         </div>
 
-        {reglas && (reglas.regla_1_activa || reglas.limite_portafolio_activa || reglas.una_operacion_semana_activa) && (
+        {modoEfectivo === "operar" && reglas && (reglas.regla_1_activa || reglas.limite_portafolio_activa || reglas.una_operacion_semana_activa) && (
           <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-serif text-lg text-[#E7ECE8]">Tus reglas de gestión de riesgo</h2>
@@ -537,6 +587,7 @@ export default function OperarPage() {
           </div>
         )}
 
+        {modoEfectivo === "operar" && (
         <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
           <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">Gestor de riesgo</h2>
           <p className="text-[13px] text-[#7C8A82] mb-4">
@@ -557,9 +608,11 @@ export default function OperarPage() {
             </div>
           )}
         </div>
+        )}
 
+        {modoEfectivo === "no_operar" && (
         <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
-          <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">¿Esta semana no vas a operar?</h2>
+          <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">Tu decisión de no operar esta semana</h2>
           <p className="text-[13px] text-[#7C8A82] mb-4">
             Registra tu decisión. Se guarda lo que muestra el calibrador (si lo consultaste) y tu estado de ánimo (si lo elegiste arriba).
           </p>
@@ -582,7 +635,10 @@ export default function OperarPage() {
             {guardandoSinOperar ? "Guardando..." : "Registrar que no opero"}
           </button>
         </div>
+        )}
 
+        {modoEfectivo === "operar" && (
+        <>
         {error && <p className="text-[13px] text-[#E0605A] mb-4">{error}</p>}
 
         <button onClick={handleSubmit} disabled={guardando || !puedeGuardar} className="w-full py-3.5 bg-[#34D399] text-[#0B0F0E] rounded text-sm font-medium disabled:opacity-50">
@@ -594,6 +650,8 @@ export default function OperarPage() {
             ? "Completa tu tesis y “me equivoco si” para guardar"
             : "Abrir operación"}
         </button>
+        </>
+        )}
       </div>
     </AppShell>
   );

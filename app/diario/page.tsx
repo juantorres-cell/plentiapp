@@ -36,6 +36,8 @@ type SinOperar = {
   emocion: "bien" | "medio" | "mal" | null;
 };
 
+type Filtro = "todas" | "operadas" | "sin_operar";
+
 // Una fila de la tabla: una operación, o una semana sin operación.
 type Fila = {
   key: string;
@@ -77,6 +79,7 @@ export default function DiarioPage() {
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [sinOperar, setSinOperar] = useState<SinOperar[]>([]);
+  const [filtro, setFiltro] = useState<Filtro>("todas");
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [edicion, setEdicion] = useState<Edicion | null>(null);
   const [errorEdicion, setErrorEdicion] = useState<string | null>(null);
@@ -245,6 +248,11 @@ export default function DiarioPage() {
   const abiertas = operaciones.filter((o) => o.estado === "abierta").length;
   const gananciaAcumulada = operacionesConResultado.reduce((acc, o) => acc + Number(o.resultado), 0);
   const operacionesGanadoras = operacionesConResultado.filter((o) => Number(o.resultado) >= 0).length;
+  const semanasOperadas = new Set(operaciones.map((o) => o.semana)).size;
+  const semanasSinOperar = sinOperar.filter((s) => !operaciones.some((o) => o.semana === s.semana)).length;
+  const filasVisibles = filas.filter((f) =>
+    filtro === "todas" ? true : filtro === "operadas" ? f.op !== null : f.op === null && f.sin !== null
+  );
 
   return (
     <AppShell>
@@ -265,6 +273,9 @@ export default function DiarioPage() {
           <div className="bg-[#121815] border border-[#24302A] rounded-lg p-5">
             <p className="text-[12px] text-[#7C8A82] mb-1.5">Semanas registradas</p>
             <p className="font-serif text-2xl text-[#E7ECE8]">{semanas.length}</p>
+            <p className="text-[11.5px] text-[#48544D] mt-1">
+              {semanasOperadas} operadas · {semanasSinOperar} sin operar
+            </p>
           </div>
           <div className="bg-[#121815] border border-[#24302A] rounded-lg p-5">
             <p className="text-[12px] text-[#7C8A82] mb-1.5">Resultado acumulado</p>
@@ -284,6 +295,21 @@ export default function DiarioPage() {
           </div>
         </div>
 
+        <div className="flex gap-2 mb-4">
+          {([["todas", "Todas"], ["operadas", "Operadas"], ["sin_operar", "Sin operar"]] as [Filtro, string][]).map(([valor, texto]) => (
+            <button
+              key={valor}
+              type="button"
+              onClick={() => setFiltro(valor)}
+              className={`px-3.5 py-1.5 rounded-full border text-[12.5px] ${
+                filtro === valor ? "border-[#34D399] bg-[#12261B] text-[#34D399]" : "border-[#24302A] text-[#7C8A82]"
+              }`}
+            >
+              {texto}
+            </button>
+          ))}
+        </div>
+
         <div className="bg-[#121815] border border-[#24302A] rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -299,7 +325,7 @@ export default function DiarioPage() {
               </tr>
             </thead>
             <tbody>
-              {filas.map((fila, i) => {
+              {filasVisibles.map((fila, i) => {
                 const { op, semana } = fila;
                 const abierta = op?.estado === "abierta";
                 const entrada = op?.emocion_entrada ?? fila.sin?.emocion ?? emocion(semana, "entrada");
@@ -378,7 +404,7 @@ export default function DiarioPage() {
                   </tr>
                 );
               })}
-              {filas.length === 0 && (
+              {filasVisibles.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-5 py-8 text-center text-[#7C8A82]">
                     Todavía no tienes registros. Empieza con tu check-in semanal.
