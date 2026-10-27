@@ -22,6 +22,15 @@ type Reglas = {
 
 type Estado = "bien" | "medio" | "mal";
 type Modo = "operar" | "no_operar";
+type Detalle = "tranquilo" | "ansioso" | "euforico" | "frustrado" | "miedo" | "fomo";
+const DETALLES: { valor: Detalle; texto: string }[] = [
+  { valor: "tranquilo", texto: "Tranquilo" },
+  { valor: "ansioso", texto: "Ansioso" },
+  { valor: "euforico", texto: "Eufórico" },
+  { valor: "frustrado", texto: "Frustrado" },
+  { valor: "miedo", texto: "Con miedo" },
+  { valor: "fomo", texto: "Con FOMO" },
+];
 
 export default function OperarPage() {
   const router = useRouter();
@@ -48,6 +57,7 @@ export default function OperarPage() {
 
   const [snapshot, setSnapshot] = useState<SnapshotCalibrador | null>(null);
   const [emocionEntrada, setEmocionEntrada] = useState<Estado | null>(null);
+  const [emocionDetalle, setEmocionDetalle] = useState<Detalle | null>(null);
   const [motivoSinOperar, setMotivoSinOperar] = useState("");
   const [guardandoSinOperar, setGuardandoSinOperar] = useState(false);
   const [errorSinOperar, setErrorSinOperar] = useState<string | null>(null);
@@ -161,7 +171,7 @@ export default function OperarPage() {
   const { errores: erroresHipotesis, avisos: avisosHipotesis } = validarHipotesis(hipotesis);
   const hipotesisIniciada = tesis.trim() !== "" || meEquivoco.trim() !== "";
 
-  const puedeGuardar = (!superaRegla1 || confirmacionRiesgo) && erroresHipotesis.length === 0 && !!semana;
+  const puedeGuardar = (!superaRegla1 || confirmacionRiesgo) && erroresHipotesis.length === 0 && !!semana && emocionEntrada !== null;
 
   async function handleSubmit() {
     if (!userId || !semana) return;
@@ -204,6 +214,7 @@ export default function OperarPage() {
       hipotesis,
       lectura_sistema: lecturaSistema,
       emocion_entrada: emocionEntrada,
+      emocion_detalle: emocionDetalle,
       activo: activo || null,
       cantidad: numero(cantidad),
       tipo_orden: tipoOrden,
@@ -238,6 +249,7 @@ export default function OperarPage() {
           semana,
           motivo: motivoSinOperar.trim(),
           emocion: emocionEntrada,
+          emocion_detalle: emocionDetalle,
           lectura_sistema: snapshot ?? { calibrador_consultado: false },
         },
         { onConflict: "user_id,semana" }
@@ -286,6 +298,8 @@ export default function OperarPage() {
           confirmoRiesgo: confirmacionRiesgo,
           yaOperoEstaSemana: !!reglas?.una_operacion_semana_activa && yaOperoEstaSemana,
           justificacion: `${tesis} | Me equivoco si: ${meEquivoco}`,
+          emocionEntrada,
+          emocionDetalle,
         }),
       });
       const json = await res.json();
@@ -356,6 +370,41 @@ export default function OperarPage() {
           Aquí registras lo que vas a hacer y por qué. El resultado lo cierras después, desde el diario.
         </p>
 
+        <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
+          <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">¿Cómo te sientes ahora?</h2>
+          <p className="text-[13px] text-[#7C8A82] mb-4">
+            Antes de decidir nada. Es tu estado en este momento, distinto del check-in semanal. Es obligatorio para abrir una operación.
+          </p>
+          <div className="flex gap-3 mb-4">
+            {(["bien", "medio", "mal"] as Estado[]).map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => setEmocionEntrada(e)}
+                className={`flex-1 py-2.5 rounded border text-sm capitalize ${
+                  emocionEntrada === e ? "border-[#34D399] bg-[#12261B] text-[#34D399]" : "border-[#24302A] text-[#7C8A82]"
+                }`}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+          <p className="text-[12.5px] text-[#7C8A82] mb-2">¿Cuál se parece más? (opcional)</p>
+          <div className="flex flex-wrap gap-2">
+            {DETALLES.map((d) => (
+              <button
+                key={d.valor}
+                type="button"
+                onClick={() => setEmocionDetalle(emocionDetalle === d.valor ? null : d.valor)}
+                className={`px-3.5 py-1.5 rounded-full border text-[12.5px] ${
+                  emocionDetalle === d.valor ? "border-[#34D399] bg-[#12261B] text-[#34D399]" : "border-[#24302A] text-[#7C8A82]"
+                }`}
+              >
+                {d.texto}
+              </button>
+            ))}
+          </div>
+        </div>
         {yaOperoCargado && !yaOperoEstaSemana && (
           <div className="flex gap-3 mb-8">
             {([["operar", "Voy a operar"], ["no_operar", "No voy a operar"]] as [Modo, string][]).map(([valor, texto]) => (
@@ -518,28 +567,6 @@ export default function OperarPage() {
         </div>
         )}
 
-        <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
-          <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">
-            {modoEfectivo === "operar" ? "¿Cómo te sientes al abrirla?" : "¿Cómo te sientes con esta decisión?"}
-          </h2>
-          <p className="text-[13px] text-[#7C8A82] mb-4">
-            Opcional. Es tu estado en este momento, distinto del check-in semanal.
-          </p>
-          <div className="flex gap-3">
-            {(["bien", "medio", "mal"] as Estado[]).map((e) => (
-              <button
-                key={e}
-                type="button"
-                onClick={() => setEmocionEntrada(e)}
-                className={`flex-1 py-2.5 rounded border text-sm capitalize ${
-                  emocionEntrada === e ? "border-[#34D399] bg-[#12261B] text-[#34D399]" : "border-[#24302A] text-[#7C8A82]"
-                }`}
-              >
-                {e}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {modoEfectivo === "operar" && reglas && (reglas.regla_1_activa || reglas.limite_portafolio_activa || reglas.una_operacion_semana_activa) && (
           <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
@@ -648,6 +675,8 @@ export default function OperarPage() {
             ? "Confirma el riesgo para guardar"
             : erroresHipotesis.length > 0
             ? "Completa tu tesis y “me equivoco si” para guardar"
+            : emocionEntrada === null
+            ? "Cuéntanos cómo te sientes para guardar"
             : "Abrir operación"}
         </button>
         </>
