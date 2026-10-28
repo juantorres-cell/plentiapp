@@ -79,6 +79,15 @@ export type SeguimientoCalibrador = "siguio" | "se_aparto" | "no_comparable" | "
 
 export type Patrones = {
   version: 1;
+  /** Regla de riesgo del usuario (% máximo por operación), para que los textos citen su número. */
+  regla_pct: number;
+  /** La operación más reciente (cualquier estado): sirve para detectar "subir tamaño tras perder" en vivo. */
+  ultima_operacion: {
+    semana: string;
+    estado: "abierta" | "cerrada";
+    resultado: number | null;
+    monto: number | null;
+  } | null;
   muestra: { operaciones: number; cerradas_con_resultado: number; semanas: number };
 
   /** Patrón 1: cómo te va según cómo te sientes al abrir la operación. */
@@ -364,8 +373,14 @@ export function calcularPatrones(e: EntradaPatrones): Patrones {
       }
     });
 
+  const ultima = ops.length > 0 ? ops[ops.length - 1] : null;
+
   return {
     version: 1,
+    regla_pct: e.reglas.riesgo_maximo_pct,
+    ultima_operacion: ultima
+      ? { semana: ultima.semana, estado: ultima.estado, resultado: ultima.resultado, monto: monto(ultima) }
+      : null,
     muestra: { operaciones: ops.length, cerradas_con_resultado: cerradas.length, semanas: universo.size },
     emocion_vs_resultado: {
       por_estado: {

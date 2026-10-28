@@ -10,6 +10,8 @@ import { cargarPatrones } from "@/lib/cargarPatrones";
 import { getSemanaActual } from "@/lib/semana";
 import type { Patrones } from "@/lib/patrones";
 import PatronesConducta from "@/components/PatronesConducta";
+import MicroLecciones from "@/components/MicroLecciones";
+import { leccionesDeConducta } from "@/lib/microlecciones";
 
 type PerfilDB = {
   email: string;
@@ -101,6 +103,7 @@ export default function PerfilPage() {
   }
 
   const alertas = perfil?.perfil_psicologico_ia?.alertas ?? [];
+  const leccionesPerfil = patrones ? leccionesDeConducta(patrones) : [];
 
   return (
     <AppShell>
@@ -226,6 +229,11 @@ export default function PerfilPage() {
                 )}
               </section>
 
+              <MicroLecciones
+                lecciones={leccionesPerfil}
+                titulo="Para tener presente"
+                descripcion="Lo que tus propios datos sugieren mirar. Son observaciones, no conclusiones."
+              />
               <PatronesConducta patrones={patrones} />
             </div>
           </div>

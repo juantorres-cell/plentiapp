@@ -249,6 +249,21 @@ prueba("la línea se limita a las últimas 16 semanas", () => {
   assert.equal(l[0].semana, ops[4].semana);
 });
 
+prueba("regla_pct y ultima_operacion", () => {
+  assert.equal(calcularPatrones(entrada({})).ultima_operacion, null);
+  const p = calcularPatrones(
+    entrada({
+      reglas: { riesgo_maximo_pct: 2, base_calculo_riesgo: "capital_total" },
+      operaciones: [
+        op({ semana: W2, resultado: 5, cantidad: 4, precio_referencia: 100 }),
+        op({ semana: W1, resultado: -20, cantidad: 10, precio_referencia: 100 }), // más antigua
+      ],
+    })
+  );
+  assert.equal(p.regla_pct, 2);
+  assert.deepEqual(p.ultima_operacion, { semana: W2, estado: "cerrada", resultado: 5, monto: 400 });
+});
+
 prueba("la semana actual SÍ cuenta si ya tiene decisión", () => {
   const p = calcularPatrones(
     entrada({

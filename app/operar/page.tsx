@@ -10,6 +10,10 @@ import { getSemanaActual } from "@/lib/semana";
 import AppShell from "@/components/AppShell";
 import CalibradorAtr, { type SnapshotCalibrador } from "@/components/CalibradorAtr";
 import { numero, validarHipotesis, fechaRevisionPorDefecto, compararConCalibrador } from "@/lib/operaciones";
+import { cargarPatrones } from "@/lib/cargarPatrones";
+import type { Patrones } from "@/lib/patrones";
+import { leccionDeEmocion, leccionesDeOperacion } from "@/lib/microlecciones";
+import MicroLecciones from "@/components/MicroLecciones";
 
 type Reglas = {
   regla_1_activa: boolean;
@@ -56,6 +60,7 @@ export default function OperarPage() {
   const [cuandoReviso, setCuandoReviso] = useState("");
 
   const [snapshot, setSnapshot] = useState<SnapshotCalibrador | null>(null);
+  const [patrones, setPatrones] = useState<Patrones | null>(null);
   const [emocionEntrada, setEmocionEntrada] = useState<Estado | null>(null);
   const [emocionDetalle, setEmocionDetalle] = useState<Detalle | null>(null);
   const [motivoSinOperar, setMotivoSinOperar] = useState("");
@@ -116,6 +121,7 @@ export default function OperarPage() {
       setYaOperoEstaSemana(!!existentes && existentes.length > 0);
       setYaOperoCargado(true);
       setCargandoEstado(false);
+      setPatrones(await cargarPatrones(supabase, data.session.user.id, s));
     });
   }, [router]);
 
@@ -170,6 +176,16 @@ export default function OperarPage() {
   const hipotesis = { observo, tesis, me_equivoco_si: meEquivoco, cuando_reviso: cuandoReviso };
   const { errores: erroresHipotesis, avisos: avisosHipotesis } = validarHipotesis(hipotesis);
   const hipotesisIniciada = tesis.trim() !== "" || meEquivoco.trim() !== "";
+
+  const leccionEmocion = leccionDeEmocion(emocionEntrada, emocionDetalle);
+  const leccionesOperacion = leccionesDeOperacion(patrones, {
+    estado: emocionEntrada,
+    detalle: emocionDetalle,
+    monto: montoPosicion,
+    cantidad: numero(cantidad),
+    cantidadCalibrador: snapshot?.posicion?.cantidad ?? null,
+    reglaPct: reglas?.riesgo_maximo_pct ?? 1,
+  });
 
   const puedeGuardar = (!superaRegla1 || confirmacionRiesgo) && erroresHipotesis.length === 0 && !!semana && emocionEntrada !== null;
 
@@ -405,6 +421,7 @@ export default function OperarPage() {
             ))}
           </div>
         </div>
+        <MicroLecciones lecciones={leccionEmocion ? [leccionEmocion] : []} />
         {yaOperoCargado && !yaOperoEstaSemana && (
           <div className="flex gap-3 mb-8">
             {([["operar", "Voy a operar"], ["no_operar", "No voy a operar"]] as [Modo, string][]).map(([valor, texto]) => (
@@ -568,6 +585,7 @@ export default function OperarPage() {
         )}
 
 
+        {modoEfectivo === "operar" && <MicroLecciones lecciones={leccionesOperacion} />}
         {modoEfectivo === "operar" && reglas && (reglas.regla_1_activa || reglas.limite_portafolio_activa || reglas.una_operacion_semana_activa) && (
           <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
