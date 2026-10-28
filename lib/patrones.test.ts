@@ -214,6 +214,41 @@ prueba("semanas: operadas, sin operar, solo check-in y semana actual excluida", 
   assert.equal(s.decision_por_estado.medio.sin_decision, 0); // la semana actual no cuenta
 });
 
+prueba("línea de semanas: orden cronológico, tipo, emoción y resultado", () => {
+  const p = calcularPatrones(
+    entrada({
+      operaciones: [
+        op({ semana: W1, resultado: 10, emocion_entrada: "bien" }),
+        op({ semana: W1, resultado: 5, emocion_entrada: "bien" }),
+        op({ semana: W2, resultado: -5, emocion_entrada: "mal" }),
+        op({ semana: W5, estado: "abierta", resultado: null, emocion_entrada: "medio" }),
+      ],
+      sin_operar: [{ semana: W3, emocion: "mal", emocion_detalle: "miedo" }],
+      check_ins: [{ semana: W4, tipo: "entrada", estado_animo: "bien" }],
+      semana_actual: W5,
+    })
+  );
+  const l = p.semanas.linea;
+  assert.deepEqual(l.map((x) => x.semana), [W1, W2, W3, W4, W5]);
+  assert.deepEqual(l.map((x) => x.tipo), ["operada", "operada", "sin_operar", "sin_decision", "operada"]);
+  assert.equal(l[0].resultado, 15); // suma de las dos operaciones cerradas de la semana
+  assert.equal(l[1].resultado, -5);
+  assert.equal(l[2].resultado, null);
+  assert.equal(l[3].emocion, "bien");
+  assert.equal(l[4].resultado, null); // solo tiene una operación abierta
+});
+
+prueba("la línea se limita a las últimas 16 semanas", () => {
+  const ops = Array.from({ length: 20 }, (_, i) => {
+    const d = new Date(Date.UTC(2026, 0, 5 + i * 7)); // lunes consecutivos
+    return op({ semana: d.toISOString().slice(0, 10), resultado: 1 });
+  });
+  const l = calcularPatrones(entrada({ operaciones: ops })).semanas.linea;
+  assert.equal(l.length, 16);
+  assert.equal(l[15].semana, ops[19].semana);
+  assert.equal(l[0].semana, ops[4].semana);
+});
+
 prueba("la semana actual SÍ cuenta si ya tiene decisión", () => {
   const p = calcularPatrones(
     entrada({

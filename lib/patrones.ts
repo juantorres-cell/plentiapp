@@ -67,6 +67,14 @@ export type Grupo = { n: number; promedio: number; perdidas: number; suficiente:
 export type ConteoRegla = { calculables: number; superaron: number; suficiente: boolean };
 export type Decision = { operadas: number; sin_operar: number; sin_decision: number; suficiente: boolean };
 
+export type LineaSemana = {
+  semana: string;
+  tipo: "operada" | "sin_operar" | "sin_decision";
+  emocion: Estado | null;
+  /** Suma de los resultados cerrados de esa semana; null si no hay ninguno. */
+  resultado: number | null;
+};
+
 export type SeguimientoCalibrador = "siguio" | "se_aparto" | "no_comparable" | "no_consultado" | "sin_dato";
 
 export type Patrones = {
@@ -108,6 +116,8 @@ export type Patrones = {
     solo_check_in_recientes: string[];
     decision_por_estado: Record<Estado, Decision>;
     sin_operar_por_detalle: Partial<Record<Detalle, number>>;
+    /** Últimas 16 semanas, de la más antigua a la más reciente (para la tira visual). */
+    linea: LineaSemana[];
   };
 };
 
@@ -316,6 +326,7 @@ export function calcularPatrones(e: EntradaPatrones): Patrones {
   let sinOperarReg = 0;
   let soloCheckIn = 0;
   const recientes: string[] = [];
+  const lineaDesc: LineaSemana[] = [];
 
   Array.from(universo)
     .sort((a, b) => b.localeCompare(a)) // más recientes primero
@@ -326,10 +337,21 @@ export function calcularPatrones(e: EntradaPatrones): Patrones {
         operadas++;
         const em = emocionOperacion(opsSemana[0], semanal).estado;
         if (em) decision[em].operadas++;
+        const conResultado = opsSemana.filter((o) => o.estado === "cerrada" && o.resultado !== null);
+        lineaDesc.push({
+          semana,
+          tipo: "operada",
+          emocion: em,
+          resultado:
+            conResultado.length > 0
+              ? redondear(conResultado.reduce((a, o) => a + (o.resultado as number), 0))
+              : null,
+        });
       } else if (sin) {
         sinOperarReg++;
         const em = sin.emocion ?? semanal.get(semana) ?? null;
         if (em) decision[em].sin_operar++;
+        lineaDesc.push({ semana, tipo: "sin_operar", emocion: em, resultado: null });
         if (sin.emocion_detalle) {
           sinPorDetalle[sin.emocion_detalle] = (sinPorDetalle[sin.emocion_detalle] ?? 0) + 1;
         }
@@ -338,6 +360,7 @@ export function calcularPatrones(e: EntradaPatrones): Patrones {
         if (recientes.length < 5) recientes.push(semana);
         const em = semanal.get(semana) ?? null;
         if (em) decision[em].sin_decision++;
+        lineaDesc.push({ semana, tipo: "sin_decision", emocion: em, resultado: null });
       }
     });
 
@@ -383,6 +406,7 @@ export function calcularPatrones(e: EntradaPatrones): Patrones {
         mal: { ...decision.mal, suficiente: sumaDecision(decision.mal) >= MIN_GRUPO },
       },
       sin_operar_por_detalle: sinPorDetalle,
+      linea: lineaDesc.slice().reverse().slice(-16),
     },
   };
 }
