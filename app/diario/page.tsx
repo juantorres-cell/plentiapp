@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AppShell from "@/components/AppShell";
 import type { Hipotesis } from "@/lib/operaciones";
+import { textoDetalle, type Detalle } from "@/lib/emociones";
 
 type Cumplida = "si" | "no" | "no_evaluable";
 
@@ -22,6 +23,8 @@ type Operacion = {
   hipotesis_cumplida: Cumplida | null;
   emocion_entrada: "bien" | "medio" | "mal" | null;
   emocion_salida: "bien" | "medio" | "mal" | null;
+  emocion_detalle: Detalle | null;
+  emocion_salida_detalle: Detalle | null;
 };
 
 type CheckIn = {
@@ -34,6 +37,7 @@ type SinOperar = {
   semana: string;
   motivo: string;
   emocion: "bien" | "medio" | "mal" | null;
+  emocion_detalle: Detalle | null;
 };
 
 type Filtro = "todas" | "operadas" | "sin_operar";
@@ -96,7 +100,7 @@ export default function DiarioPage() {
 
       const { data: ops } = await supabase
         .from("operaciones")
-        .select("id, estado, semana, fecha, activo, cantidad, resultado, capital_final, leccion_aprendida, hipotesis, hipotesis_cumplida, emocion_entrada, emocion_salida")
+        .select("id, estado, semana, fecha, activo, cantidad, resultado, capital_final, leccion_aprendida, hipotesis, hipotesis_cumplida, emocion_entrada, emocion_salida, emocion_detalle, emocion_salida_detalle")
         .eq("user_id", uid)
         .order("semana", { ascending: false });
 
@@ -107,7 +111,7 @@ export default function DiarioPage() {
 
       const { data: sin } = await supabase
         .from("semanas_sin_operar")
-        .select("semana, motivo, emocion")
+        .select("semana, motivo, emocion, emocion_detalle")
         .eq("user_id", uid);
 
       setSinOperar((sin ?? []) as SinOperar[]);
@@ -332,10 +336,15 @@ export default function DiarioPage() {
                 const salida = op
                   ? op.emocion_salida ?? (abierta ? null : emocion(semana, "salida"))
                   : emocion(semana, "salida");
+                const detalleEntrada = textoDetalle(op?.emocion_detalle ?? fila.sin?.emocion_detalle ?? null);
+                const detalleSalida = textoDetalle(op?.emocion_salida_detalle ?? null);
                 return (
                   <tr key={fila.key} className={`border-b border-[#1B2420] last:border-none ${i % 2 === 1 ? "bg-[#0E1412]" : ""}`}>
                     <td className="px-5 py-3.5 whitespace-nowrap font-medium text-[#E7ECE8]">{semana}</td>
-                    <td className="px-3 py-3.5 text-lg text-center">{entrada ? EMOJI[entrada] : "—"}</td>
+                    <td className="px-3 py-3.5 text-center">
+  <span className="text-lg">{entrada ? EMOJI[entrada] : "—"}</span>
+  {detalleEntrada && <p className="m-0 mt-0.5 text-[11px] text-[#7C8A82]">{detalleEntrada}</p>}
+</td>
                     <td className="px-5 py-3.5 text-[#E7ECE8]">
                       {op?.activo ?? (fila.sin ? <span className="inline-block px-2.5 py-1 rounded-full text-[12px] bg-[#0E1412] text-[#7C8A82] border border-[#24302A]">No operé</span> : <span className="text-[#48544D]">—</span>)}
                       {abierta && op?.hipotesis?.me_equivoco_si && (
@@ -360,7 +369,10 @@ export default function DiarioPage() {
                     <td className="px-5 py-3.5 text-right tabular-nums text-[#E7ECE8]">
                       {op?.capital_final != null ? `$ ${op.capital_final.toLocaleString("es-CO")}` : <span className="text-[#48544D]">—</span>}
                     </td>
-                    <td className="px-3 py-3.5 text-lg text-center">{salida ? EMOJI[salida] : "—"}</td>
+                    <td className="px-3 py-3.5 text-center">
+  <span className="text-lg">{salida ? EMOJI[salida] : "—"}</span>
+  {detalleSalida && <p className="m-0 mt-0.5 text-[11px] text-[#7C8A82]">{detalleSalida}</p>}
+</td>
                     <td className="px-5 py-3.5 text-[#7C8A82] max-w-[220px]">
                       {op?.leccion_aprendida ?? (fila.sin ? `Motivo: ${fila.sin.motivo}` : <span className="text-[#48544D]">—</span>)}
                       {op?.hipotesis_cumplida && (

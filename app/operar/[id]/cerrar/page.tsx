@@ -8,6 +8,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AppShell from "@/components/AppShell";
 import { numero, type Hipotesis } from "@/lib/operaciones";
+import { DETALLES, type Detalle } from "@/lib/emociones";
 
 type Estado = "bien" | "medio" | "mal";
 type Cumplida = "si" | "no" | "no_evaluable";
@@ -39,6 +40,7 @@ export default function CerrarOperacionPage() {
   const [cumplida, setCumplida] = useState<Cumplida | null>(null);
   const [leccion, setLeccion] = useState("");
   const [estadoSalida, setEstadoSalida] = useState<Estado | null>(null);
+  const [detalleSalida, setDetalleSalida] = useState<Detalle | null>(null);
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +86,7 @@ export default function CerrarOperacionPage() {
         hipotesis_cumplida: cumplida,
         leccion_aprendida: leccion.trim(),
         emocion_salida: estadoSalida,
+        emocion_salida_detalle: detalleSalida,
       })
       .eq("id", op.id)
       .eq("user_id", userId)
@@ -212,7 +215,7 @@ export default function CerrarOperacionPage() {
         <div className="bg-[#121815] border border-[#24302A] rounded-lg p-6 mb-6">
           <h2 className="font-serif text-lg text-[#E7ECE8] mb-1">¿Cómo te sientes con este resultado?</h2>
           <p className="text-[13px] text-[#7C8A82] mb-4">Opcional, pero cierra tu loopback emocional de esa semana.</p>
-          <div className="flex gap-3">
+          <div className="flex gap-3 mb-4">
             {(["bien", "medio", "mal"] as Estado[]).map((e) => (
               <button
                 key={e}
@@ -223,6 +226,21 @@ export default function CerrarOperacionPage() {
                 }`}
               >
                 {e}
+              </button>
+            ))}
+          </div>
+          <p className="text-[12.5px] text-[#7C8A82] mb-2">¿Cuál se parece más? (opcional)</p>
+          <div className="flex flex-wrap gap-2">
+            {DETALLES.map((d) => (
+              <button
+                key={d.valor}
+                type="button"
+                onClick={() => setDetalleSalida(detalleSalida === d.valor ? null : d.valor)}
+                className={`px-3.5 py-1.5 rounded-full border text-[12.5px] ${
+                  detalleSalida === d.valor ? "border-[#34D399] bg-[#12261B] text-[#34D399]" : "border-[#24302A] text-[#7C8A82]"
+                }`}
+              >
+                {d.texto}
               </button>
             ))}
           </div>
