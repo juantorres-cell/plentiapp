@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AppShell from "@/components/AppShell";
+import CuestionarioReglas from "@/components/CuestionarioReglas";
+import type { RecomendacionReglas, RespuestasCuestionario } from "@/lib/reglas/cuestionario";
+import { columnasLegacy, construirConfig, construirRespuestasGuardadas } from "@/lib/reglas/aplicar";
 
 export default function ReglasPage() {
   const router = useRouter();
@@ -20,6 +23,10 @@ export default function ReglasPage() {
   const [limitePortafolioPct, setLimitePortafolioPct] = useState(5);
 
   const [unaOperacionActiva, setUnaOperacionActiva] = useState(false);
+  const [mostrandoCuestionario, setMostrandoCuestionario] = useState(false);
+  const [alertas, setAlertas] = useState<string[]>([]);
+  const [aplicando, setAplicando] = useState(false);
+  const [errorCuestionario, setErrorCuestionario] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -32,7 +39,7 @@ export default function ReglasPage() {
       const { data: perfil } = await supabase
         .from("profiles")
         .select(
-          "regla_1_activa, riesgo_maximo_pct, base_calculo_riesgo, limite_portafolio_activa, limite_portafolio_pct, una_operacion_semana_activa"
+          "regla_1_activa, riesgo_maximo_pct, base_calculo_riesgo, limite_portafolio_activa, limite_portafolio_pct, una_operacion_semana_activa, perfil_psicologico_ia"
         )
         .eq("id", data.session.user.id)
         .single();
@@ -44,6 +51,8 @@ export default function ReglasPage() {
         setLimitePortafolioActiva(perfil.limite_portafolio_activa ?? false);
         setLimitePortafolioPct(perfil.limite_portafolio_pct ?? 5);
         setUnaOperacionActiva(perfil.una_operacion_semana_activa ?? false);
+        const alertasPerfil = (perfil.perfil_psicologico_ia as { alertas?: unknown } | null)?.alertas;
+        setAlertas(Array.isArray(alertasPerfil) ? alertasPerfil.filter((a): a is string => typeof a === "string") : []);
       }
       setCargando(false);
     });
@@ -54,7 +63,7 @@ export default function ReglasPage() {
     setGuardando(true);
     setMensaje(null);
 
-    const { error } = await supabase
+    const { data: filas, error } = await supabase
       .from("profiles")
       .update({
         regla_1_activa: regla1Activa,
@@ -64,10 +73,52 @@ export default function ReglasPage() {
         limite_portafolio_pct: limitePortafolioPct,
         una_operacion_semana_activa: unaOperacionActiva,
       })
-      .eq("id", userId);
+      .eq("id", userId)
+      .select("id");
 
     setGuardando(false);
-    setMensaje(error ? error.message : "Reglas guardadas. Se aplicarán en tu próxima operación.");
+    setMensaje(
+      error
+        ? error.message
+        : !filas || filas.length === 0
+          ? "No se guardó ningún cambio. Revisa las políticas RLS de profiles."
+          : "Reglas guardadas. Se aplicarán en tu próxima operación."
+    );
+  }
+
+  async function aplicarRecomendacion(respuestas: RespuestasCuestionario, recomendacion: RecomendacionReglas) {
+    if (!userId) return;
+    setAplicando(true);
+    setErrorCuestionario(null);
+    const ahora = new Date().toISOString();
+    const legacy = columnasLegacy(recomendacion);
+
+    const { data: filas, error } = await supabase
+      .from("profiles")
+      .update({
+        ...legacy,
+        respuestas_cuestionario: construirRespuestasGuardadas(respuestas, alertas, ahora),
+        reglas_config: construirConfig(recomendacion, ahora),
+      })
+      .eq("id", userId)
+      .select("id");
+
+    setAplicando(false);
+    if (error) {
+      setErrorCuestionario(error.message);
+      return;
+    }
+    if (!filas || filas.length === 0) {
+      setErrorCuestionario("No se guardó ningún cambio. Revisa las políticas RLS de profiles.");
+      return;
+    }
+    setRegla1Activa(legacy.regla_1_activa);
+    setRiesgoMaximoPct(legacy.riesgo_maximo_pct);
+    setLimitePortafolioActiva(legacy.limite_portafolio_activa);
+    setLimitePortafolioPct(legacy.limite_portafolio_pct);
+    setUnaOperacionActiva(legacy.una_operacion_semana_activa);
+    setMostrandoCuestionario(false);
+    setMensaje("Reglas aplicadas. Puedes ajustarlas abajo cuando quieras.");
   }
 
   if (cargando) {
@@ -91,6 +142,21 @@ export default function ReglasPage() {
           de "Operar" antes de que confirmes una operación.
         </p>
 
+        <div className="bg-[#121815] border border-[#24302A] rounded-lg p-5 mb-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-[#E7ECE8] mb-1">¿No sabes qué reglas elegir?</p>
+            <p className="text-[12.5px] text-[#7C8A82] leading-relaxed">
+              Responde 6 preguntas y te sugerimos reglas según cómo operas. Después puedes ajustarlas.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMostrandoCuestionario(true)}
+            className="px-4 py-2.5 border border-[#34D399] text-[#34D399] rounded text-sm font-medium whitespace-nowrap"
+          >
+            Ayúdame a elegir
+          </button>
+        </div>
         <div className="flex flex-col gap-4">
           <ReglaCard
             titulo="Regla del 1%"
@@ -163,6 +229,21 @@ export default function ReglasPage() {
         </button>
         {mensaje && <p className="text-[12.5px] text-[#7C8A82] mt-3">{mensaje}</p>}
       </div>
+
+      {mostrandoCuestionario && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0B0F0E]" role="dialog" aria-modal="true" aria-label="Elegir reglas">
+          <CuestionarioReglas
+            alertas={alertas}
+            aplicando={aplicando}
+            error={errorCuestionario}
+            onAplicar={aplicarRecomendacion}
+            onCancelar={() => {
+              setMostrandoCuestionario(false);
+              setErrorCuestionario(null);
+            }}
+          />
+        </div>
+      )}
     </AppShell>
   );
 }

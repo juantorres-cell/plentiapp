@@ -161,6 +161,16 @@ prueba("escalones: valor, baja por alerta con piso en 2% y conversión a semanal
   assert.deepEqual(pct({ tolerancia: "a", cadencia: "c" }, ["capital_necesario"]), [1, "semana"]);
 });
 
+prueba("el texto 'Bajó un escalón' solo aparece si el valor realmente bajó", () => {
+  const textos = (cambios: Partial<RespuestasCuestionario>, alertas: string[]) =>
+    buscar(caso(cambios, alertas).activas, "perdida_periodo").porque.join(" | ");
+  assert.ok(textos({ tolerancia: "b" }, ["capital_necesario"]).includes("Bajó un escalón"));
+  assert.ok(textos({ tolerancia: "c" }, ["urgencia_ingresos"]).includes("Bajó un escalón"));
+  assert.ok(!textos({ tolerancia: "a" }, ["capital_necesario"]).includes("Bajó un escalón"));
+  assert.ok(textos({ tolerancia: "a" }, ["capital_necesario"]).includes("mínimo"));
+  assert.ok(!textos({ tolerancia: "b" }, []).includes("escalón"));
+});
+
 console.log("Robustez");
 
 prueba("tendencia_paralisis y alertas desconocidas no cambian nada", () => {

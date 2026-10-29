@@ -188,7 +188,9 @@ export function recomendarReglas(entrada: EntradaCuestionario): RecomendacionReg
     c: "Dijiste que podrías perder más de 6% en un mes; el techo de Plenti es 6%.",
   };
   const porquePerdida = [motivoTolerancia[r.tolerancia]];
-  if (capitalOUrgencia) porquePerdida.push("Bajó un escalón. " + motivoCapital);
+  if (capitalOUrgencia) {
+    porquePerdida.push((indiceTolerancia > 0 ? "Bajó un escalón. " : "Ya estaba en el mínimo de 2%. ") + motivoCapital);
+  }
   if (semanal) porquePerdida.push("Como piensas operar casi a diario, el límite se mide por semana (la mitad del mensual).");
   const senalesPerdida = (capitalOUrgencia ? 1 : 0) + (r.tolerancia === "a" ? 1 : 0);
   const perdida: ReglaRecomendada = {
